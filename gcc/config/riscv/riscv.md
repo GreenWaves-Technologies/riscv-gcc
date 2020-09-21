@@ -827,8 +827,10 @@
 	    (const_int 32))))]
   "(TARGET_MUL||(Pulp_Cpu>=PULP_V2)||(Pulp_Cpu==PULP_SLIM)) && !TARGET_64BIT"
   {
-        if (Pulp_Cpu) return "p.mulh<u>\t%0,%1,%2";
-        else return "mulh<u>\t%0,%1,%2";
+        if (Pulp_Cpu) {
+		if (Has_64Int) return "p.mulh<u>.d\t%0,%1,%2";
+		return "p.mulh<u>\t%0,%1,%2";
+        } else return "mulh<u>\t%0,%1,%2";
   }
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")])
@@ -5066,6 +5068,62 @@
   DONE;
 })
 
+(define_insn "unpack1_lo_h_b_s"
+  [(set	(match_operand:V2HI 0 "register_operand" "=r")
+	(vec_concat:V2HI
+		(subreg:HI (sign_extend:HI (vec_select:QI (match_operand:V4QI 1 "register_operand" "r") (parallel [(const_int 1)]))) 0)
+		(subreg:HI (sign_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 0)]))) 0)
+	)
+   )
+  ]
+  "((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOVECT)"
+  "pv.unpack1.lo.h.b.s \t%0,%1\t # Unpack Low(Vect4) to Vect2 with sign extension"
+[(set_attr "type" "move")
+ (set_attr "mode" "SI")]
+)
+
+(define_insn "unpack1_lo_h_b_u"
+  [(set	(match_operand:V2HI 0 "register_operand" "=r")
+	(vec_concat:V2HI
+		(subreg:HI (zero_extend:HI (vec_select:QI (match_operand:V4QI 1 "register_operand" "r") (parallel [(const_int 1)]))) 0)
+		(subreg:HI (zero_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 0)]))) 0)
+	)
+   )
+  ]
+  "((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOVECT)"
+  "pv.unpack1.lo.h.b.u \t%0,%1\t # Unpack Low(Vect4) to Vect2 with zero extension"
+[(set_attr "type" "move")
+ (set_attr "mode" "SI")]
+)
+
+(define_insn "unpack1_hi_h_b_s"
+  [(set	(match_operand:V2HI 0 "register_operand" "=r")
+	(vec_concat:V2HI
+		(subreg:HI (sign_extend:HI (vec_select:QI (match_operand:V4QI 1 "register_operand" "r") (parallel [(const_int 3)]))) 0)
+		(subreg:HI (sign_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 2)]))) 0)
+	)
+   )
+  ]
+  "((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOVECT)"
+  "pv.unpack1.hi.h.b.s \t%0,%1\t # Unpack High(Vect4) to Vect2 with sign extension"
+[(set_attr "type" "move")
+ (set_attr "mode" "SI")]
+)
+
+(define_insn "unpack1_hi_h_b_u"
+  [(set	(match_operand:V2HI 0 "register_operand" "=r")
+	(vec_concat:V2HI
+		(subreg:HI (zero_extend:HI (vec_select:QI (match_operand:V4QI 1 "register_operand" "r") (parallel [(const_int 3)]))) 0)
+		(subreg:HI (zero_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 2)]))) 0)
+	)
+   )
+  ]
+  "((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOVECT)"
+  "pv.unpack1.hi.h.b.u \t%0,%1\t # Unpack High(Vect4) to Vect2 with zero extension"
+[(set_attr "type" "move")
+ (set_attr "mode" "SI")]
+)
+
 ;; Vector permutation
 
 (define_insn "vec_perm<VMODEALL2:mode>_internal2_1"
@@ -6199,7 +6257,7 @@
   {
 	int Radix, Npoints;
 	riscv_bitrev_imm_op(operands[3], operands[2], &Radix, &Npoints);
-  	operands[3] = GEN_INT (Radix);
+  	operands[3] = GEN_INT (Radix-1);
   	operands[2] = GEN_INT (Npoints);
 	return "p.bitrev\t%0,%1,%2,%3\t # Bit reverse";
   }
@@ -8312,8 +8370,32 @@
  ""
 { 
         switch (which_alternative) {
-  		case 0: return Hw_Loop_Align?".align 2\n\tlp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set":"lp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set";
-  		case 1: return Hw_Loop_Align?".align 2\n\tlp.setupi \tx%4,%1,(%3)\t # loop setup, lc+le set":"lp.setupi \tx%4,%1,(%3)\t # loop setup, lc+le set";
+  		case 0:
+			if (Hw_Loop_Align && (INTVAL (operands[4]) == 0)) {
+				if (Hw_Loop_NoRVC)
+					return ".align 2\n\tlp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set\n\t.starthwloopnorvc";
+				else
+					return ".align 2\n\tlp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set";
+			} else {
+				if (Hw_Loop_NoRVC)
+					return "lp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set\n\t.starthwloopnorvc";
+				else
+					return "lp.setup  \tx%4,%1,(%3)\t # loop setup, lc+le set";
+			}
+			break;
+  		case 1:
+			if (Hw_Loop_Align && (INTVAL (operands[4]) == 0)) {
+				if (Hw_Loop_NoRVC)
+					return ".align 2\n\tlp.setupi  \tx%4,%1,(%3)\t # loop setup, lc+le set\n\t.starthwloopnorvc";
+				else
+					return ".align 2\n\tlp.setupi  \tx%4,%1,(%3)\t # loop setup, lc+le set";
+			} else {
+				if (Hw_Loop_NoRVC)
+					return "lp.setupi  \tx%4,%1,(%3)\t # loop setup, lc+le set\n\t.starthwloopnorvc";
+				else
+					return "lp.setupi  \tx%4,%1,(%3)\t # loop setup, lc+le set";
+			}
+			break;
 		default: return "";
 	}
 }
@@ -8416,7 +8498,10 @@
    (set (match_operand:SI 0 "register_operand" "=r") (plus (match_dup 2) (const_int -1)))
    (unspec [(const_int 0)] UNSPEC_LSETUP_END)]
  "((Pulp_Cpu>=PULP_V1) && !TARGET_MASK_NOHWLOOP)"
- "/* loop end %0 %l1 */ "
+ {
+	if (Hw_Loop_NoRVC) return ".stophwloop\n\t/* loop end %0 %l1 */";
+	else return "/* loop end %0 %l1 */";
+ }
   [(set_attr "length" "0")]
 ;; [(set_attr "type" "branch")
 ;;  (set_attr "mode" "none")

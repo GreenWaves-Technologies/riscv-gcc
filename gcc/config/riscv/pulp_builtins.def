@@ -332,6 +332,9 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(sqrtohf2,         	f16altsqrt,     RISCV_OHF_FTYPE_OHF,                    pulp_gap9, NULL)
   DIRECT_BUILTIN1(absohf2,          	f16altabs,      RISCV_OHF_FTYPE_OHF,                    pulp_gap9, NULL)
 
-
+  DIRECT_BUILTIN1(unpack1_lo_h_b_s,	unpacklo_h_b_s,	RISCV_V2HI_FTYPE_V4QI,			pulp_gap9, NULL)
+  DIRECT_BUILTIN1(unpack1_lo_h_b_u,	unpacklo_h_b_u,	RISCV_V2HI_FTYPE_V4QI,			pulp_gap9, NULL)
+  DIRECT_BUILTIN1(unpack1_hi_h_b_s,	unpackhi_h_b_s,	RISCV_V2HI_FTYPE_V4QI,			pulp_gap9, NULL)
+  DIRECT_BUILTIN1(unpack1_hi_h_b_u,	unpackhi_h_b_u,	RISCV_V2HI_FTYPE_V4QI,			pulp_gap9, NULL)
 
 

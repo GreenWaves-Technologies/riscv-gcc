@@ -338,7 +338,12 @@ Minimum instruction in a hardware loop, default is 2
 
 mhwloopalign
 Target UInteger Var(Hw_Loop_Align) Init(0)
-Enable SmallFloat vector extensions
+Force start of hw loop to be 4 byte aligned
+
+mhwloopnorvc
+Target UInteger Var(Hw_Loop_NoRVC) Init(0)
+Disable 16bits instructions inside hw loop
+
 
 Mask(64BIT)
 
