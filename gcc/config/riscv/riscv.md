@@ -2431,7 +2431,7 @@
  (set_attr "mode" "SI")]
 )
 
-(define_insn"clip_minmax_reg"
+(define_insn "clip_minmax_reg"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (smin:SI (smax:SI (match_operand:SI 1 "register_operand" "r")
 			  (neg:SI (plus:SI (match_operand:SI 2 "register_operand" "r") (const_int 1)))
@@ -2444,17 +2444,17 @@
 )
 
 
-(define_insn"clip_maxmin_reg"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (smax:SI (smin:SI (match_operand:SI 1 "register_operand" "r")
-			  (match_operand:SI 2 "register_operand" "r")
-		 )
-		 (neg:SI (plus:SI (match_dup 2) (const_int 1)))))]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
-  "p.clipr\\t%0,%1,%2"
-[(set_attr "type" "logical")
- (set_attr "mode" "SI")]
-)
+;; (define_insn"clip_maxmin_reg"
+;;   [(set (match_operand:SI 0 "register_operand" "=r")
+;;         (smax:SI (smin:SI (match_operand:SI 1 "register_operand" "r")
+;; 			  (match_operand:SI 2 "register_operand" "r")
+;; 		 )
+;; 		 (neg:SI (plus:SI (match_dup 2) (const_int 1)))))]
+;;   "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
+;;   "p.clipr\\t%0,%1,%2"
+;; [(set_attr "type" "logical")
+;;  (set_attr "mode" "SI")]
+;; )
 
 (define_insn "clipu_maxmin"
   [(set (match_operand:SI 0 "register_operand" "=r")
@@ -2478,20 +2478,20 @@
  (set_attr "mode" "SI")]
 )
 
-(define_insn "clipu_maxmin_reg"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (smax:SI (smin:SI (match_operand:SI 1 "register_operand" "r")
-                          (match_operand:SI 2 "register_operand" "r")
-		 )
-		 (const_int 0)
-        )
-   )
-  ]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
-  "p.clipur\\t%0,%1,%2"
-[(set_attr "type" "logical")
- (set_attr "mode" "SI")]
-)
+;; (define_insn "clipu_maxmin_reg"
+;; [(set (match_operand:SI 0 "register_operand" "=r")
+;;        (smax:SI (smin:SI (match_operand:SI 1 "register_operand" "r")
+;;                          (match_operand:SI 2 "register_operand" "r")
+;;		 )
+;;		 (const_int 0)
+;;        )
+;;   )
+;;  ]
+;;  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
+;;  "p.clipur\\t%0,%1,%2 \t# clipu_maxmin_reg"
+;;[(set_attr "type" "logical")
+;; (set_attr "mode" "SI")]
+;;)
 
 (define_insn "clipu_minmax_reg"
   [(set (match_operand:SI 0 "register_operand" "=r")
@@ -2501,7 +2501,7 @@
    )
   ]
   "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
-  "p.clipur\\t%0,%1,%2"
+  "p.clipur\\t%0,%1,%2 \t# clipu_minmax_reg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
 )
