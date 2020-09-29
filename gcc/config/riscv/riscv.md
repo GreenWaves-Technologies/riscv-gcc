@@ -2495,8 +2495,8 @@
 
 (define_insn "clipu_minmax_reg"
   [(set (match_operand:SI 0 "register_operand" "=r")
-        (smin:SI (smax:SI (match_operand:SI 1 "register_operand" "r") (const_int 0))
-		 (match_operand:SI 2 "register_operand" "r")
+        (umin:SI (smax:SI (match_operand:SI 1 "register_operand" "r") (const_int 0))
+		  (match_operand:SI 2 "register_operand" "r")
         )
    )
   ]
