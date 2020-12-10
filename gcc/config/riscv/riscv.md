@@ -5124,6 +5124,48 @@
  (set_attr "mode" "SI")]
 )
 
+(define_insn "unpack2_h_b_s"
+  [
+   (set	(match_operand:V2HI 0 "register_operand" "=r")
+	(vec_concat:V2HI
+		(subreg:HI (sign_extend:HI (vec_select:QI (match_operand:V4QI 1 "register_operand" "r") (parallel [(const_int 1)]))) 0)
+		(subreg:HI (sign_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 0)]))) 0)
+	)
+   )
+   (set	(match_operand:V2HI 2 "register_operand" "=r")
+	(vec_concat:V2HI
+		(subreg:HI (sign_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 3)]))) 0)
+		(subreg:HI (sign_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 2)]))) 0)
+	)
+   )
+  ]
+  "((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOVECT)"
+  "pv.unpack2.h.b.s \t%0,%1,%2\t # Unpack Vect4 to 2 Vect2 with sign extension"
+[(set_attr "type" "move")
+ (set_attr "mode" "SI")]
+)
+
+(define_insn "unpack2_h_b_u"
+  [
+   (set	(match_operand:V2HI 0 "register_operand" "=r")
+	(vec_concat:V2HI
+		(subreg:HI (zero_extend:HI (vec_select:QI (match_operand:V4QI 1 "register_operand" "r") (parallel [(const_int 1)]))) 0)
+		(subreg:HI (zero_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 0)]))) 0)
+	)
+   )
+   (set	(match_operand:V2HI 2 "register_operand" "=r")
+	(vec_concat:V2HI
+		(subreg:HI (zero_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 3)]))) 0)
+		(subreg:HI (zero_extend:HI (vec_select:QI (match_dup 1) (parallel [(const_int 2)]))) 0)
+	)
+   )
+  ]
+  "((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOVECT)"
+  "pv.unpack2.h.b.u \t%0,%1,%2\t # Unpack Vect4 to 2 Vect2 with zero extension"
+[(set_attr "type" "move")
+ (set_attr "mode" "SI")]
+)
+
 ;; Vector permutation
 
 (define_insn "vec_perm<VMODEALL2:mode>_internal2_1"
