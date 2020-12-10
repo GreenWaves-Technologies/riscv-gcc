@@ -3458,6 +3458,18 @@ riscv_legitimize_call_address (rtx addr)
   return addr;
 }
 
+static bool
+riscv_use_by_pieces_infrastructure_p (unsigned HOST_WIDE_INT size,
+                                    unsigned int align ATTRIBUTE_UNUSED,
+                                    enum by_pieces_operation op,
+                                    bool speed_p)
+{
+  if (op != MOVE_BY_PIECES || (speed_p))
+    return default_use_by_pieces_infrastructure_p (size, align, op, speed_p);
+
+  return 1; // size <= 1;
+}
+
 /* Emit straight-line code to move LENGTH bytes from SRC to DEST.
    Assume that the areas do not overlap.  */
 
@@ -3579,6 +3591,9 @@ riscv_expand_block_move (rtx dest, rtx src, rtx length)
 
       align = MIN (MIN (MEM_ALIGN (src), MEM_ALIGN (dest)), BITS_PER_WORD);
       factor = BITS_PER_WORD / align;
+      if (optimize_function_for_size_p (cfun)
+	  && INTVAL (length) * factor * UNITS_PER_WORD > MOVE_RATIO (false))
+	return false;
 
       if (INTVAL (length) <= RISCV_MAX_MOVE_BYTES_STRAIGHT / factor)
         {
@@ -6473,6 +6488,9 @@ static void riscv_file_end (void)
 
 #undef TARGET_ASM_GLOBALIZE_DECL_NAME
 #define TARGET_ASM_GLOBALIZE_DECL_NAME riscv_globalize_decl_name
+
+// #undef TARGET_USE_BY_PIECES_INFRASTRUCTURE_P
+// #define TARGET_USE_BY_PIECES_INFRASTRUCTURE_P riscv_use_by_pieces_infrastructure_p
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 
