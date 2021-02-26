@@ -55,6 +55,9 @@
   UNSPEC_VEC_PERM3
   UNSPEC_VEC_PERM4
   UNSPEC_VEC_PERM5
+  UNSPEC_VEC_PERM6
+  UNSPEC_VEC_PERM7
+  UNSPEC_VEC_PERM8
 
   ;; Viterbi
   UNSPEC_VIT_MAX
@@ -5166,27 +5169,61 @@
 
 ;; Vector permutation
 
+;;(define_insn "vec_perm<VMODEALL2:mode>_internal2_1"
+;;  [(set (match_operand:VMODEALL2 0 "register_operand"               "=r,r")
+;;        (unspec:VMODEALL2 [(match_operand:VMODEALL2 1 "register_operand"  "r,r")
+;;                           (match_operand:VMODEALL2 2 "register_operand"  "1,1")
+;;                           (match_operand:V2HI      3 "permute_sel_operand" "r,i")
+;;		          ] UNSPEC_VEC_PERM2)
+;;   )
+;;  ]
+;;  "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK)  && riscv_valid_permute_operands (operands[1], operands[2], operands[3]))"
+;;{
+;;	switch (which_alternative) {
+;;		case 0:
+;;			return "pv.shuffle.h\t%0,%1,%3";
+;;		case 1:
+;;			{
+;;				int Mask=0;
+;;				rtx xoperands[3];
+;;				int i;
+;;
+;;				xoperands[0] = operands[0]; xoperands[1] = operands[2];
+;;  				for (i = 0; i < 2; ++i) Mask |= (((INTVAL (XVECEXP (operands[3], 0, i)) & 1))<<(4*i));
+;;				Mask = Mask & 0x0FF;
+;;				xoperands[2] = gen_rtx_CONST_INT (SImode, Mask);
+;;				output_asm_insn("pv.shuffle.sci.h\t%0,%1,%2", xoperands);
+;;				return "";
+;;			}
+;;		default:
+;;			return "";
+;;	}
+;;}
+;;[(set_attr "type" "move,move")
+;; (set_attr "mode" "SI,SI")]
+;;)
+
+
 (define_insn "vec_perm<VMODEALL2:mode>_internal2_1"
   [(set (match_operand:VMODEALL2 0 "register_operand"               "=r,r")
         (unspec:VMODEALL2 [(match_operand:VMODEALL2 1 "register_operand"  "r,r")
-                           (match_operand:VMODEALL2 2 "register_operand"  "1,1")
-                           (match_operand:VMODEALL2 3 "permute_sel_operand" "r,i")
+                           (match_operand:V2HI      2 "permute_sel_operand" "r,i")
 		          ] UNSPEC_VEC_PERM2)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK)  && riscv_valid_permute_operands (operands[1], operands[2], operands[3]))"
+  "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK)  && riscv_valid_permute_operands (operands[1], operands[1], operands[2]))"
 {
 	switch (which_alternative) {
 		case 0:
-			return "pv.shuffle.h\t%0,%1,%3";
+			return "pv.shuffle.h\t%0,%1,%2";
 		case 1:
 			{
 				int Mask=0;
 				rtx xoperands[3];
 				int i;
 
-				xoperands[0] = operands[0]; xoperands[1] = operands[2];
-  				for (i = 0; i < 2; ++i) Mask |= (((INTVAL (XVECEXP (operands[3], 0, i)) & 1))<<(4*i));
+				xoperands[0] = operands[0]; xoperands[1] = operands[1];
+  				for (i = 0; i < 2; ++i) Mask |= (((INTVAL (XVECEXP (operands[2], 0, i)) & 1))<<(4*i));
 				Mask = Mask & 0x0FF;
 				xoperands[2] = gen_rtx_CONST_INT (SImode, Mask);
 				output_asm_insn("pv.shuffle.sci.h\t%0,%1,%2", xoperands);
@@ -5204,7 +5241,7 @@
   [(set (match_operand:VMODEALL2 0 "register_operand"               "=r")
         (unspec:VMODEALL2 [(match_operand:VMODEALL2 1 "register_operand" "0")
                            (match_operand:VMODEALL2 2 "register_operand" "r")
-                           (match_operand:VMODEALL2 3 "register_operand" "r")
+                           (match_operand:V2HI      3 "register_operand" "r")
 		          ] UNSPEC_VEC_PERM3)
    )
   ]
@@ -5217,7 +5254,7 @@
 (define_insn "vec_perm<VMODEALL2:mode>_int1"
   [(set (match_operand:VMODEALL2 0 "register_operand"               "=r,r")
         (unspec:VMODEALL2 [(match_operand:VMODEALL2 1 "register_operand"  "r,r")
-                           (match_operand:VMODEALL2 2 "permute_sel_operand" "r,i")
+                           (match_operand:V2HI      2 "permute_sel_operand" "r,i")
 		          ] UNSPEC_VEC_PERM1)
    )
   ]
@@ -5251,7 +5288,7 @@
 (define_insn "vec_perm<VMODEALL2:mode>_low"
   [(set (match_operand:VMODEALL2 0 "register_operand"                  "=r,r")
         (unspec:VMODEALL2 [(match_operand:VMODEALL2 1 "register_operand"    "r,r")
-                           (match_operand:VMODEALL2 2 "permute_sel_operand" "r,i")
+                           (match_operand:V2HI      2 "permute_sel_operand" "r,i")
                           ] UNSPEC_VEC_PERM4)
    )
   ]
@@ -5267,7 +5304,7 @@
 (define_insn "vec_perm<VMODEALL2:mode>_high"
   [(set (match_operand:VMODEALL2 0 "register_operand"                  "=r,r")
         (unspec:VMODEALL2 [(match_operand:VMODEALL2 1 "register_operand"    "r,r")
-                           (match_operand:VMODEALL2 2 "permute_sel_operand" "r,i")
+                           (match_operand:V2HI      2 "permute_sel_operand" "r,i")
                           ] UNSPEC_VEC_PERM5)
    )
   ]
@@ -5279,29 +5316,107 @@
 
 /* __GAP8 Stop */
 
-(define_expand "vec_perm<VMODEALL2:mode>"
+(define_expand "vec_perm_const<VMODEALL2:mode>"
   [(match_operand:VMODEALL2 0 "register_operand"    "")
    (match_operand:VMODEALL2 1 "register_operand"    "")
    (match_operand:VMODEALL2 2 "register_operand"    "")
-   (match_operand:VMODEALL2 3 "permute_sel_operand" "")
+   (match_operand:V2HI      3 "permute_sel_operand" "")
   ]
   "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
 {
 	if (rtx_equal_p(operands[1], operands[2])) {
-		emit_insn (gen_vec_permv2hi_internal2_1 (operands[0], operands[1], operands[2], operands[3]));
+		if ((<MODE>mode == V2OHFmode) && Has_F16ALT)
+			// emit_insn (gen_vec_permv2ohf_internal2_1 (operands[0], operands[1], operands[2], operands[3]));
+			emit_insn (gen_vec_permv2ohf_internal2_1 (operands[0], operands[1], operands[3]));
+		else if ((<MODE>mode == V2HFmode) && Has_F16)
+			// emit_insn (gen_vec_permv2hf_internal2_1 (operands[0], operands[1], operands[2], operands[3]));
+			emit_insn (gen_vec_permv2hf_internal2_1 (operands[0], operands[1], operands[3]));
+		else
+			// emit_insn (gen_vec_permv2hi_internal2_1 (operands[0], operands[1], operands[2], operands[3]));
+			emit_insn (gen_vec_permv2hi_internal2_1 (operands[0], operands[1], operands[3]));
 	} else {
 		/* __GAP8 Start */
                 if ((Pulp_Cpu==PULP_GAP8||Pulp_Cpu==PULP_GAP9) && (GET_CODE (operands[3]) == CONST_VECTOR) &&
                     (INTVAL(XVECEXP (operands[3], 0, 0)) == 0) && (INTVAL(XVECEXP (operands[3], 0, 1)) == 2)) {
-			emit_insn (gen_vec_permv2hi_low(operands[0], operands[1], operands[2]));
+			if ((<MODE>mode == V2OHFmode) && Has_F16ALT)
+				emit_insn (gen_vec_permv2ohf_low(operands[0], operands[1], operands[2]));
+			else if ((<MODE>mode == V2HFmode) && Has_F16)
+				emit_insn (gen_vec_permv2hf_low(operands[0], operands[1], operands[2]));
+			else
+				emit_insn (gen_vec_permv2hi_low(operands[0], operands[1], operands[2]));
                 } else if ((Pulp_Cpu==PULP_GAP8||Pulp_Cpu==PULP_GAP9) && (GET_CODE (operands[3]) == CONST_VECTOR) &&
                            (INTVAL(XVECEXP (operands[3], 0, 0)) == 1) && (INTVAL(XVECEXP (operands[3], 0, 1)) == 3)) {
-                        emit_insn (gen_vec_permv2hi_high(operands[0], operands[1], operands[2]));
+			if ((<MODE>mode == V2OHFmode) && Has_F16ALT)
+                        	emit_insn (gen_vec_permv2ohf_high(operands[0], operands[1], operands[2]));
+			else if ((<MODE>mode == V2HFmode) && Has_F16)
+                        	emit_insn (gen_vec_permv2hf_high(operands[0], operands[1], operands[2]));
+			else
+                        	emit_insn (gen_vec_permv2hi_high(operands[0], operands[1], operands[2]));
                 } else
 		/* __GAP8 Stop */
 		{
-                        if (GET_CODE (operands[3]) != REG) operands[3] = force_reg (V2HImode, operands[3]);
-                        emit_insn (gen_vec_permv2hi_internal2 (operands[0], operands[1], operands[2], operands[3]));
+                       	if (GET_CODE (operands[3]) != REG) operands[3] = force_reg (V2HImode, operands[3]);
+			if ((<MODE>mode == V2OHFmode) && Has_F16ALT) {
+                        	emit_insn (gen_vec_permv2ohf_internal2 (operands[0], operands[1], operands[2], operands[3]));
+			} else if ((<MODE>mode == V2HFmode) && Has_F16) {
+                        	emit_insn (gen_vec_permv2hf_internal2 (operands[0], operands[1], operands[2], operands[3]));
+			} else {
+                        	emit_insn (gen_vec_permv2hi_internal2 (operands[0], operands[1], operands[2], operands[3]));
+			}
+                }
+	}
+	DONE;
+}
+)
+
+
+(define_expand "vec_perm<VMODEALL2:mode>"
+  [(match_operand:VMODEALL2 0 "register_operand"    "")
+   (match_operand:VMODEALL2 1 "register_operand"    "")
+   (match_operand:VMODEALL2 2 "register_operand"    "")
+   (match_operand:V2HI      3 "permute_sel_operand" "")
+  ]
+  "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
+{
+	if (rtx_equal_p(operands[1], operands[2])) {
+		if ((<MODE>mode == V2OHFmode) && Has_F16ALT)
+			// emit_insn (gen_vec_permv2ohf_internal2_1 (operands[0], operands[1], operands[2], operands[3]));
+			emit_insn (gen_vec_permv2ohf_internal2_1 (operands[0], operands[1], operands[3]));
+		else if ((<MODE>mode == V2HFmode) && Has_F16)
+			// emit_insn (gen_vec_permv2hf_internal2_1 (operands[0], operands[1], operands[2], operands[3]));
+			emit_insn (gen_vec_permv2hf_internal2_1 (operands[0], operands[1], operands[3]));
+		else
+			// emit_insn (gen_vec_permv2hi_internal2_1 (operands[0], operands[1], operands[2], operands[3]));
+			emit_insn (gen_vec_permv2hi_internal2_1 (operands[0], operands[1], operands[3]));
+	} else {
+		/* __GAP8 Start */
+                if ((Pulp_Cpu==PULP_GAP8||Pulp_Cpu==PULP_GAP9) && (GET_CODE (operands[3]) == CONST_VECTOR) &&
+                    (INTVAL(XVECEXP (operands[3], 0, 0)) == 0) && (INTVAL(XVECEXP (operands[3], 0, 1)) == 2)) {
+			if ((<MODE>mode == V2OHFmode) && Has_F16ALT)
+				emit_insn (gen_vec_permv2ohf_low(operands[0], operands[1], operands[2]));
+			else if ((<MODE>mode == V2HFmode) && Has_F16)
+				emit_insn (gen_vec_permv2hf_low(operands[0], operands[1], operands[2]));
+			else
+				emit_insn (gen_vec_permv2hi_low(operands[0], operands[1], operands[2]));
+                } else if ((Pulp_Cpu==PULP_GAP8||Pulp_Cpu==PULP_GAP9) && (GET_CODE (operands[3]) == CONST_VECTOR) &&
+                           (INTVAL(XVECEXP (operands[3], 0, 0)) == 1) && (INTVAL(XVECEXP (operands[3], 0, 1)) == 3)) {
+			if ((<MODE>mode == V2OHFmode) && Has_F16ALT)
+                        	emit_insn (gen_vec_permv2ohf_high(operands[0], operands[1], operands[2]));
+			else if ((<MODE>mode == V2HFmode) && Has_F16)
+                        	emit_insn (gen_vec_permv2hf_high(operands[0], operands[1], operands[2]));
+			else
+                        	emit_insn (gen_vec_permv2hi_high(operands[0], operands[1], operands[2]));
+                } else
+		/* __GAP8 Stop */
+		{
+                       	if (GET_CODE (operands[3]) != REG) operands[3] = force_reg (V2HImode, operands[3]);
+			if ((<MODE>mode == V2OHFmode) && Has_F16ALT) {
+                        	emit_insn (gen_vec_permv2ohf_internal2 (operands[0], operands[1], operands[2], operands[3]));
+			} else if ((<MODE>mode == V2HFmode) && Has_F16) {
+                        	emit_insn (gen_vec_permv2hf_internal2 (operands[0], operands[1], operands[2], operands[3]));
+			} else {
+                        	emit_insn (gen_vec_permv2hi_internal2 (operands[0], operands[1], operands[2], operands[3]));
+			}
                 }
 	}
 	DONE;
@@ -5313,7 +5428,7 @@
         (unspec:V4QI [(match_operand:V4QI 1 "register_operand"  "r,r")
                       (match_operand:V4QI 2 "register_operand"  "1,1")
                       (match_operand:V4QI 3 "permute_sel_operand" "r,i")
-		     ] UNSPEC_VEC_PERM2)
+		     ] UNSPEC_VEC_PERM7)
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK)  && riscv_valid_permute_operands (operands[1], operands[2], operands[3]))"
@@ -5353,7 +5468,7 @@
         (unspec:V4QI [(match_operand:V4QI 1 "register_operand" "0")
                       (match_operand:V4QI 2 "register_operand" "r")
                       (match_operand:V4QI 3 "register_operand" "r")
-		     ] UNSPEC_VEC_PERM3)
+		     ] UNSPEC_VEC_PERM8)
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
@@ -5366,7 +5481,7 @@
   [(set (match_operand:V4QI 0 "register_operand"               "=r,r")
         (unspec:V4QI [(match_operand:V4QI 1 "register_operand"  "r,r")
                       (match_operand:V4QI 2 "permute_sel_operand" "r,i")
-		     ] UNSPEC_VEC_PERM1)
+		     ] UNSPEC_VEC_PERM6)
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
