@@ -114,6 +114,8 @@
   ;; To force type conversion without explicit cast
   UNSPEC_TRUNCSIHI
   UNSPEC_TRUNCSIQI
+  UNSPEC_TRUNCV2HFHF
+  UNSPEC_TRUNCV2OHFOHF
 
   UNSPEC_BITREV
 ])
@@ -1448,6 +1450,22 @@
 ;;  ....................
 
 ;; Standard gcc patterns
+
+(define_insn "truncv2hfhf2"
+  [(set (match_operand:HF 0 "register_operand" "=r") (unspec:HF [(match_operand:V2HF 1 "register_operand" "0")] UNSPEC_TRUNCV2HFHF))]
+  "(Pulp_Cpu>=PULP_GAP9)"
+  ""
+  [(set_attr "type"	"nop")
+   (set_attr "mode"	"none")]
+)
+
+(define_insn "truncv2ohfohf2"
+  [(set (match_operand:OHF 0 "register_operand" "=r") (unspec:OHF [(match_operand:V2OHF 1 "register_operand" "0")] UNSPEC_TRUNCV2OHFOHF))]
+  "(Pulp_Cpu>=PULP_GAP9)"
+  ""
+  [(set_attr "type"	"nop")
+   (set_attr "mode"	"none")]
+)
 
 (define_insn "truncsihi2"
   [(set (match_operand:HI 0 "register_operand" "=r") (unspec:HI [(match_operand:SI 1 "register_operand" "0")] UNSPEC_TRUNCSIHI))]

@@ -164,6 +164,8 @@ Currently these macros are used in 2 contexts:
 
   DIRECT_BUILTIN1(truncsihi2,           trunch,       	RISCV_SHORT_FTYPE_INT,     			pulp_vall, NULL)
   DIRECT_BUILTIN1(truncsiqi2,           truncb,       	RISCV_CHAR_FTYPE_INT,     			pulp_vall, NULL)
+  DIRECT_BUILTIN1(truncv2hfhf2,         truncf16,      	RISCV_HF_FTYPE_V2HF,     			pulp_gap9, NULL)
+  DIRECT_BUILTIN1(truncv2ohfohf2,       truncf16a,     	RISCV_OHF_FTYPE_V2OHF,     			pulp_gap9, NULL)
 
   DIRECT_BUILTIN1(mulsForced_si3,       mulfs,       	RISCV_INT_FTYPE_INT_INT,     			pulp_v2, NULL)
   DIRECT_BUILTIN1(muluForced_si3,       mulfu,       	RISCV_INT_FTYPE_INT_INT,     			pulp_v2, NULL)
@@ -327,10 +329,24 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(smaxsf3,          	f32max,         RISCV_SF_FTYPE_SF_SF,                   pulp_gap9, NULL)
   DIRECT_BUILTIN1(sqrtsf2,          	f32sqrt,        RISCV_SF_FTYPE_SF,                      pulp_gap9, NULL)
   DIRECT_BUILTIN1(abssf2,           	f32abs,         RISCV_SF_FTYPE_SF,                      pulp_gap9, NULL)
+
+  DIRECT_BUILTIN1(sminhf3,         	f16min,      	RISCV_HF_FTYPE_HF_HF,                	pulp_gap9, NULL)
+  DIRECT_BUILTIN1(smaxhf3,         	f16max,      	RISCV_HF_FTYPE_HF_HF,                	pulp_gap9, NULL)
+  DIRECT_BUILTIN1(sqrthf2,         	f16sqrt,     	RISCV_HF_FTYPE_HF,                    	pulp_gap9, NULL)
+  DIRECT_BUILTIN1(abshf2,          	f16abs,      	RISCV_HF_FTYPE_HF,                    	pulp_gap9, NULL)
+
   DIRECT_BUILTIN1(sminohf3,         	f16altmin,      RISCV_OHF_FTYPE_OHF_OHF,                pulp_gap9, NULL)
   DIRECT_BUILTIN1(smaxohf3,         	f16altmax,      RISCV_OHF_FTYPE_OHF_OHF,                pulp_gap9, NULL)
   DIRECT_BUILTIN1(sqrtohf2,         	f16altsqrt,     RISCV_OHF_FTYPE_OHF,                    pulp_gap9, NULL)
   DIRECT_BUILTIN1(absohf2,          	f16altabs,      RISCV_OHF_FTYPE_OHF,                    pulp_gap9, NULL)
+
+  DIRECT_BUILTIN1(sminv2hf3,         	f16min2,      	RISCV_V2HF_FTYPE_V2HF_V2HF,             pulp_gap9, NULL)
+  DIRECT_BUILTIN1(smaxv2hf3,         	f16max2,      	RISCV_V2HF_FTYPE_V2HF_V2HF,             pulp_gap9, NULL)
+  DIRECT_BUILTIN1(absv2hf2,          	f16abs2,      	RISCV_V2HF_FTYPE_V2HF,          	pulp_gap9, NULL)
+
+  DIRECT_BUILTIN1(sminv2ohf3,         	f16altmin2,    	RISCV_V2OHF_FTYPE_V2OHF_V2OHF,          pulp_gap9, NULL)
+  DIRECT_BUILTIN1(smaxv2ohf3,         	f16altmax2,    	RISCV_V2OHF_FTYPE_V2OHF_V2OHF,          pulp_gap9, NULL)
+  DIRECT_BUILTIN1(absv2ohf2,          	f16altabs2,	RISCV_V2OHF_FTYPE_V2OHF,          	pulp_gap9, NULL)
 
   DIRECT_BUILTIN1(unpack1_lo_h_b_s,	unpacklo_h_b_s,	RISCV_V2HI_FTYPE_V4QI,			pulp_gap9, NULL)
   DIRECT_BUILTIN1(unpack1_lo_h_b_u,	unpacklo_h_b_u,	RISCV_V2HI_FTYPE_V4QI,			pulp_gap9, NULL)
