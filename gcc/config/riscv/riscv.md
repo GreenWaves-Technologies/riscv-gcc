@@ -415,13 +415,14 @@
 
 (define_mode_attr size_mem   [(V4QI "4") (V2HI "4") (V2HF "4") (V2OHF "4") (SF "4") (SI "4") (HI "2") (HF "2") (OHF "2") (QI "1")])
 (define_mode_attr size_load_store [(V4QI "w") (V2HI "w") (V2HF "w") (V2OHF "w") (SF "w") (SI "w") (QI "b") (HI "h") (HF "h") (OHF "h")])
+(define_mode_attr size_load       [(V4QI "w") (V2HI "w") (V2HF "w") (V2OHF "w") (SF "w") (SI "w") (QI "b") (HI "h") (HF "hu") (OHF "hu")])
 
 ;; This attribute gives the length suffix for a sign- or zero-extension
 ;; instruction.
 (define_mode_attr size [(QI "b") (HI "h")])
 
 ;; Mode attributes for loads.
-(define_mode_attr load [(QI "lb") (HI "lh") (HF "lh") (OHF "lh") (SI "lw") (DI "ld") (SF "flw") (DF "fld")])
+(define_mode_attr load [(QI "lb") (HI "lh") (HF "lhu") (OHF "lhu") (SI "lw") (DI "ld") (SF "flw") (DF "fld")])
 
 ;; Instruction names for stores.
 (define_mode_attr store [(QI "sb") (HI "sh") (HF "sh") (OHF "sh") (SI "sw") (DI "sd") (SF "fsw") (DF "fsd")])
@@ -3553,7 +3554,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOINDREGREG && ((reload_completed || reload_in_progress) || !(<MODE>mode == QImode || <MODE>mode == HImode)))"
-  "p.l<size_load_store>\t%0,%2(%1)\t# load reg(reg)"
+  "p.l<size_load>\t%0,%2(%1)\t# load reg(reg)"
   [(set_attr "type" "load")
    (set_attr "mode" "<LDSTINDMODE>")]
 )
@@ -3565,7 +3566,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOINDREGREG)"
-  "p.l<size_load_store><u>\t%0,%2(%1)\t# load reg(reg), ext"
+  "p.l<size_load><u>\t%0,%2(%1)\t# load reg(reg), ext"
   [(set_attr "type" "load")
    (set_attr "mode" "<LDSTINDMODE>")]
 )
@@ -3981,7 +3982,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOPOSTMOD && ((reload_completed || reload_in_progress) || !(<MODE>mode == QImode || <MODE>mode == HImode)))"
-  "p.l<size_load_store>\t%0,<size_mem>(%1!)\t# load post inc"
+  "p.l<size_load>\t%0,<size_mem>(%1!)\t# load post inc"
   [(set_attr "type" "load")
    (set_attr "mode" "<LDSTINDMODE>")]
 )
@@ -3994,7 +3995,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOPOSTMOD)"
-  "p.l<size_load_store><u>\t%0,<size_mem>(%1!)\t# load post inc, ext"
+  "p.l<size_load><u>\t%0,<size_mem>(%1!)\t# load post inc, ext"
   [(set_attr "type" "load")
    (set_attr "mode" "<LDSTINDMODE>")]
 )
@@ -4005,7 +4006,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOPOSTMOD && ((reload_completed || reload_in_progress) || !(<MODE>mode == QImode || <MODE>mode == HImode)))"
-  "p.l<size_load_store>\t%0,-<size_mem>(%1!)\t# load post dec"
+  "p.l<size_load>\t%0,-<size_mem>(%1!)\t# load post dec"
   [(set_attr "type" "load")
    (set_attr "mode" "<LDSTINDMODE>")]
 )
@@ -4018,7 +4019,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOPOSTMOD)"
-  "p.l<size_load_store><u>\t%0,-<size_mem>(%1!)\t# load post dec, ext"
+  "p.l<size_load><u>\t%0,-<size_mem>(%1!)\t# load post dec, ext"
   [(set_attr "type" "load")
    (set_attr "mode" "<LDSTINDMODE>")]
 )
@@ -4032,8 +4033,8 @@
   ]
   "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOPOSTMOD && ((reload_completed || reload_in_progress) || !(<MODE>mode == QImode || <MODE>mode == HImode)))"
   "@
-   p.l<size_load_store>\t%0,%2(%1!)\t# load post modify reg
-   p.l<size_load_store>\t%0,%2(%1!)\t# load post modify imm"
+   p.l<size_load>\t%0,%2(%1!)\t# load post modify reg
+   p.l<size_load>\t%0,%2(%1!)\t# load post modify imm"
   [(set_attr "type" "load,load")
    (set_attr "mode" "<LDSTINDMODE>")]
 )
@@ -4048,8 +4049,8 @@
   ]
   "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOPOSTMOD)"
   "@
-   p.l<size_load_store><u>\t%0,%2(%1!)\t# load post modify reg, ext
-   p.l<size_load_store><u>\t%0,%2(%1!)\t# load post modify imm, ext"
+   p.l<size_load><u>\t%0,%2(%1!)\t# load post modify reg, ext
+   p.l<size_load><u>\t%0,%2(%1!)\t# load post modify imm, ext"
   [(set_attr "type" "load,load")
    (set_attr "mode" "<LDSTINDMODE>")]
 )
@@ -4963,17 +4964,24 @@
 ;; )
 
 (define_insn "vec_pack_<VMODEALL2:mode>"
-  [(set	(match_operand:VMODEALL2 0 "register_operand" "=r")
+  [(set	(match_operand:VMODEALL2 0 "register_operand" "=r,r,r")
 	(vec_concat:VMODEALL2
-		(match_operand:<vec_scalar_elmt> 1 "register_operand" "r")
-		(match_operand:<vec_scalar_elmt> 2 "register_operand" "r")
+		(match_operand:<vec_scalar_elmt> 1 "register_operand" "r,r,J")
+		(match_operand:<vec_scalar_elmt> 2 "register_operand" "r,J,r")
 	)
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
-  "pv.pack.h \t%0,%2,%1 \t# Vector pack of 2 shorts"
-[(set_attr "type" "move")
- (set_attr "mode" "SI")]
+{
+	switch (which_alternative) {
+		case 0: return "pv.pack.h \t%0,%2,%1 \t# Vector pack of 2 shorts";
+		case 1: return "pv.pack.h \t%0,x0,%1 \t# Vector pack of (zero, short)";
+		case 2: return "pv.pack.h \t%0,%2,x0 \t# Vector pack of (short, zero)";
+		default: return "";
+	}
+}
+[(set_attr "type" "move,move,move")
+ (set_attr "mode" "SI,SI,SI")]
 )
 
 (define_insn "vec_pack_v4qi_lo"
@@ -5278,7 +5286,7 @@
   "((Pulp_Cpu==PULP_GAP8||Pulp_Cpu==PULP_GAP9) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
   {
 	if (Pulp_Cpu==PULP_GAP8) return "pv.pack.l.h \t%0,%2,%1 \t# Pack2 low";
-	else return "pv.pack.h \t%0,%2,%1 \t# Vector pack of 2 shorts";
+	else return "pv.pack.h \t%0,%2,%1 \t# Vector pack of 2 shorts (perm)";
   }
 [(set_attr "type" "move,move")
  (set_attr "mode" "SI,SI")]
@@ -6339,7 +6347,7 @@
   [(set (match_operand:VMODEFLOAT 0 "register_operand" "=xf")
   (abs:VMODEFLOAT (match_operand:VMODEFLOAT 1 "register_operand" "xf")))]
   "TARGET_HARD_FLOAT && ((<MODE>mode == V2HFmode && Has_F16) || (<MODE>mode == V2OHFmode && Has_F16ALT))"
-  "vfabs.<vec_size>\t%0,%1"
+  "vfabs.<float_vec_size>\t%0,%1"
   [(set_attr "type" "fmove")
    (set_attr "mode" "SF")])
 
@@ -6359,7 +6367,7 @@
   [(set (match_operand:VMODEFLOAT 0 "register_operand" "=xf")
   (neg:VMODEFLOAT (match_operand:VMODEFLOAT 1 "register_operand" "xf")))]
   "TARGET_HARD_FLOAT && ((<MODE>mode == V2HFmode && Has_F16) || (<MODE>mode == V2OHFmode && Has_F16ALT))"
-  "vfneg.<vec_size>\t%0,%1"
+  "vfneg.<float_vec_size>\t%0,%1"
   [(set_attr "type" "fmove")
    (set_attr "mode" "SF")])
 
