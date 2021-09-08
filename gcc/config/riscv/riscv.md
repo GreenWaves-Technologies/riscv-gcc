@@ -3713,7 +3713,7 @@
 )
 
 (define_insn "read_fcsr"
-  [(set (match_operand:SI 0 "register_operand" "=r") (unspec:SI [(const_int 0)]  UNSPEC_FCSR_READ))]
+  [(set (match_operand:SI 0 "register_operand" "=r") (unspec_volatile:SI [(const_int 0)]  UNSPEC_FCSR_READ))]
   "TARGET_HARD_FLOAT"
   "frcsr\t%0"
   [(set_attr "type" "load")
@@ -4628,7 +4628,7 @@
   [(set (match_operand:VMODEFLOAT 0 "register_operand" "=xf")
         (float:VMODEFLOAT (match_operand:<VMODEFLOAT:int_vec_mode> 1 "register_operand" "r")))]
   "TARGET_HARD_FLOAT"
-  "vfcvt.<VMODEFLOAT:float_vec_size>.<VMODEFLOAT:ifmt>\t%0,%1"
+  "vfcvt.<VMODEFLOAT:float_vec_size>.<VMODEFLOAT:ifmt>\t%0,%1\t# f16 Vect to short int vect"
  )
 
 (define_expand "float<VMODEFLOAT:int_vec_type><VMODEFLOAT:vec_type>2"
@@ -4651,7 +4651,7 @@
   [(set (match_operand:VMODEFLOAT 0 "register_operand" "=xf")
         (unsigned_float:VMODEFLOAT (match_operand:<VMODEFLOAT:int_vec_mode> 1 "register_operand" "r")))]
   "TARGET_HARD_FLOAT"
-  "vfcvt.<VMODEFLOAT:float_vec_size>.<VMODEFLOAT:ifmt>u\t%0,%1"
+  "vfcvt.<VMODEFLOAT:float_vec_size>.<VMODEFLOAT:ifmt>u\t%0,%1\t# f16 Vect to short uint vect"
  )
 
 (define_expand "floatuns<VMODEFLOAT:int_vec_type><VMODEFLOAT:vec_type>2"
@@ -4675,7 +4675,7 @@
   [(set (match_operand:<VMODEFLOAT:int_vec_mode> 0 "register_operand" "=r")
         (fix:<VMODEFLOAT:int_vec_mode> (match_operand:VMODEFLOAT 1 "register_operand" "xf")))]
   "TARGET_HARD_FLOAT"
-  "vfcvt.<VMODEFLOAT:ifmt>.<VMODEFLOAT:float_vec_size>\t%0,%1"
+  "vfcvt.<VMODEFLOAT:ifmt>.<VMODEFLOAT:float_vec_size>\t%0,%1\t# f16 Vect to short int vect, trunc"
  )
 
 (define_expand "fix_trunc<VMODEFLOAT:vec_type><VMODEFLOAT:int_vec_type>2"
@@ -4698,7 +4698,7 @@
   [(set (match_operand:<VMODEFLOAT:int_vec_mode> 0 "register_operand" "=r")
         (unsigned_fix:<VMODEFLOAT:int_vec_mode> (match_operand:VMODEFLOAT 1 "register_operand" "xf")))]
   "TARGET_HARD_FLOAT"
-  "vfcvt.<VMODEFLOAT:ifmt>u.<VMODEFLOAT:float_vec_size>\t%0,%1"
+  "vfcvt.<VMODEFLOAT:ifmt>u.<VMODEFLOAT:float_vec_size>\t%0,%1\t# f16 Vect to short uint vect, trunc"
  )
 
 (define_expand "fixuns_trunc<VMODEFLOAT:vec_type><VMODEFLOAT:int_vec_type>2"
