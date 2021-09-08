@@ -177,6 +177,9 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(floatunsv2hiv2hf2_internal,  v2hitov2hf_u,   		RISCV_V2HF_FTYPE_V2HI,     	pulp_gap9, NULL)
   DIRECT_BUILTIN1(floatunsv2hiv2ohf2_internal,  v2hitov2ohf_u,    	RISCV_V2OHF_FTYPE_V2HI,     	pulp_gap9, NULL)
 
+  DIRECT_BUILTIN1(extendv2hfv2ohf2,	v2hftov2ohf,     		RISCV_V2OHF_FTYPE_V2HF,     	pulp_gap9, NULL)
+  DIRECT_BUILTIN1(extendv2ohfv2hf2,	v2ohftov2hf,     		RISCV_V2HF_FTYPE_V2OHF,     	pulp_gap9, NULL)
+
   DIRECT_BUILTIN1(mulsForced_si3,       mulfs,       	RISCV_INT_FTYPE_INT_INT,     			pulp_v2, NULL)
   DIRECT_BUILTIN1(muluForced_si3,       mulfu,       	RISCV_INT_FTYPE_INT_INT,     			pulp_v2, NULL)
   DIRECT_BUILTIN1(mulsForcedNr_si3,     mulfsN,       	RISCV_INT_FTYPE_INT_INT_INT,     		pulp_v2, CheckBuiltin)
