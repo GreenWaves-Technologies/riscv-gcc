@@ -5918,6 +5918,18 @@
  (set_attr "mode" "SF")]
 )
 
+(define_insn "<vec_op2_name>_swap_sc<VMODEFLOAT:mode>3"
+  [(set (match_operand:VMODEFLOAT 0 "register_operand" "=xf")
+        (vec_op2_float:VMODEFLOAT (vec_duplicate:VMODEFLOAT (match_operand:<vec_scalar_elmt> 1 "register_operand" "xf"))
+				  (match_operand:VMODEFLOAT 2 "register_operand" "xf")
+              )
+   )]
+ "TARGET_HARD_FLOAT && (Has_F16 || Has_F16ALT)"
+"vf<vec_op2_asm_name>.r.<float_vec_size> \t%0,%2,%1\t # FVect Op Scalar (swap)"
+[(set_attr "type" "arith")
+ (set_attr "mode" "SF")]
+)
+
 (define_insn "<vec_op2_name><VMODEINT:mode>3"
   [(set (match_operand:VMODEINT 0 "register_operand" "=r,r")
         (vec_op2:VMODEINT (match_operand:VMODEINT 1 "register_operand" "r,r")
