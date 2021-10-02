@@ -934,14 +934,38 @@
   [(set_attr "type" "idiv")
    (set_attr "mode" "DI")])
 
-(define_insn "div<mode>3"
+(define_insn "div<mode>3_internal"
   [(set (match_operand:ANYF           0 "register_operand" "=f")
 	(div:ANYF (match_operand:ANYF 1 "register_operand" " f")
 		  (match_operand:ANYF 2 "register_operand" " f")))]
-  "TARGET_HARD_FLOAT && TARGET_FDIV"
-  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fdiv.s\t%0,%1,%2" : "fdiv.<fmt>\t%0,%1,%2"; }
+  "TARGET_HARD_FLOAT && TARGET_FDIV && !(Is_Gap9_Vega && (<MODE>mode == OHFmode))"
+  {
+	if (Pulp_DP_Format==PULP_DP_FORMAT32) return "fdiv.s\t%0,%1,%2";
+	else return "fdiv.<fmt>\t%0,%1,%2";
+  }
   [(set_attr "type" "fdiv")
    (set_attr "mode" "<UNITMODE>")])
+
+(define_expand "div<mode>3"
+  [(set (match_operand:ANYF  	      0 "register_operand" " ")
+        (div:ANYF (match_operand:ANYF 1 "register_operand" " ")
+                  (match_operand:ANYF 2 "register_operand" " "))
+  )]
+  "TARGET_HARD_FLOAT && TARGET_FDIV"
+  {
+	if (Is_Gap9_Vega && (<MODE>mode == OHFmode)) {
+        	rtx Reg0 = gen_reg_rtx (SFmode);
+        	rtx Reg1 = gen_reg_rtx (SFmode);
+        	rtx Reg2 = gen_reg_rtx (SFmode);
+
+    		emit_insn(gen_extendohfsf2(Reg0, operands[1]));
+    		emit_insn(gen_extendohfsf2(Reg1, operands[2]));
+    		emit_insn(gen_divsf3_internal(Reg2, Reg0, Reg1));
+    		emit_insn(gen_truncsfohf2(operands[0], Reg2));
+	} else emit_insn(gen_div<ANYF:mode>3_internal(operands[0], operands[1], operands[2]));
+    	DONE;
+  }
+)
 
 ;;
 ;;  ....................
@@ -950,15 +974,33 @@
 ;;
 ;;  ....................
 
-(define_insn "sqrt<mode>2"
+(define_insn "sqrt<mode>2_internal"
   [(set (match_operand:ANYF            0 "register_operand" "=f")
 	(sqrt:ANYF (match_operand:ANYF 1 "register_operand" " f")))]
-  "TARGET_HARD_FLOAT && TARGET_FDIV"
+  "TARGET_HARD_FLOAT && TARGET_FDIV && !(Is_Gap9_Vega && (<MODE>mode == OHFmode))"
 {
     return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fsqrt.s\t%0,%1" : "fsqrt.<fmt>\t%0,%1"; 
 }
   [(set_attr "type" "fsqrt")
    (set_attr "mode" "<UNITMODE>")])
+
+(define_expand "sqrt<mode>2"
+  [(set (match_operand:ANYF            0 "register_operand" " ")
+        (sqrt:ANYF (match_operand:ANYF 1 "register_operand" " "))
+  )]
+  "TARGET_HARD_FLOAT && TARGET_FDIV"
+  {
+	if (Is_Gap9_Vega && (<MODE>mode == OHFmode)) {
+        	rtx Reg0 = gen_reg_rtx (SFmode);
+        	rtx Reg1 = gen_reg_rtx (SFmode);
+
+    		emit_insn(gen_extendohfsf2(Reg0, operands[1]));
+    		emit_insn(gen_sqrtsf2_internal(Reg1, Reg0));
+    		emit_insn(gen_truncsfohf2(operands[0], Reg1));
+	} else emit_insn(gen_sqrt<ANYF:mode>2_internal(operands[0], operands[1]));
+    	DONE;
+  }
+)
 
 ;; Floating point multiply accumulate instructions.
 
@@ -1113,7 +1155,13 @@
   [(set (match_operand:ANYF           0 "register_operand" "=f")
 	(abs:ANYF (match_operand:ANYF 1 "register_operand" " f")))]
   "TARGET_HARD_FLOAT"
-  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fabs.s\t%0,%1" : "fabs.<fmt>\t%0,%1"; }
+  {
+	if (Pulp_DP_Format==PULP_DP_FORMAT32) return "fabs.s\t%0,%1";
+        else {
+		if (Is_Gap9_Vega && (<MODE>mode == OHFmode)) return "vfabs.ah\t%0,%1\t# VEGA Patch";
+ 		else return "fabs.<fmt>\t%0,%1";
+	}
+  }
   [(set_attr "type" "fmove")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -1164,7 +1212,13 @@
 	(smin:ANYF (match_operand:ANYF 1 "register_operand" " f")
 		   (match_operand:ANYF 2 "register_operand" " f")))]
   "TARGET_HARD_FLOAT"
-  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fmin.s\t%0,%1,%2" : "fmin.<fmt>\t%0,%1,%2"; }
+  {
+	if (Pulp_DP_Format==PULP_DP_FORMAT32) return "fmin.s\t%0,%1,%2";
+	else {
+		if (Is_Gap9_Vega && (<MODE>mode == OHFmode)) return "vfmin.ah\t%0,%1,%2\t# VEGA Patch";
+		else return "fmin.<fmt>\t%0,%1,%2"; 
+	}
+  }
   [(set_attr "type" "fmove")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -1173,7 +1227,13 @@
 	(smax:ANYF (match_operand:ANYF 1 "register_operand" " f")
 		   (match_operand:ANYF 2 "register_operand" " f")))]
   "TARGET_HARD_FLOAT"
-  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fmax.s\t%0,%1,%2" : "fmax.<fmt>\t%0,%1,%2"; }
+  {
+	if (Pulp_DP_Format==PULP_DP_FORMAT32) return "fmax.s\t%0,%1,%2";
+	else {
+		if (Is_Gap9_Vega && (<MODE>mode == OHFmode)) return "vfmax.ah\t%0,%1,%2\t# VEGA Patch";
+ 		else return "fmax.<fmt>\t%0,%1,%2";
+	}
+  }
   [(set_attr "type" "fmove")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -8098,7 +8158,13 @@
 	     [(match_operand:ANYF 2 "register_operand" " f")
 	      (match_operand:ANYF 3 "register_operand" " f")]))]
   "TARGET_HARD_FLOAT"
-  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "f%C1.s\t%0,%2,%3" : "f%C1.<fmt>\t%0,%2,%3"; }
+  {
+	if (Pulp_DP_Format==PULP_DP_FORMAT32) return "f%C1.s\t%0,%2,%3";
+	else {
+		if (Is_Gap9_Vega && (<MODE>mode == OHFmode)) return "vf%C1.r.ah\t%0,%2,%3";
+		else return "f%C1.<fmt>\t%0,%2,%3";
+	}
+  }
   [(set_attr "type" "fcmp")
    (set_attr "mode" "<UNITMODE>")])
 

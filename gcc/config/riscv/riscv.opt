@@ -332,6 +332,10 @@ mint64
 Target UInteger Var(Has_64Int) Init(0)
 Enable 64 bits integer extension
 
+mvega
+Target UInteger Var(Is_Gap9_Vega) Init(0)
+Enable specific check when target is Gap9 Vega
+
 mhwloopmin=
 Target Joined Separate UInteger Var(MinHWLoopInst) Init(2)
 Minimum instruction in a hardware loop, default is 2
