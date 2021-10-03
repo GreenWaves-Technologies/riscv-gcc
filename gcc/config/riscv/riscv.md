@@ -8161,12 +8161,14 @@
   {
 	if (Pulp_DP_Format==PULP_DP_FORMAT32) return "f%C1.s\t%0,%2,%3";
 	else {
-		if (Is_Gap9_Vega && (<MODE>mode == OHFmode)) return "vf%C1.r.ah\t%0,%2,%3";
+		if (Is_Gap9_Vega && (<MODE>mode == OHFmode)) return "vf%C1.ah\t%0,%2,%3; p.bclr\t%0,%0,31,1\t# VEGA Patch";
 		else return "f%C1.<fmt>\t%0,%2,%3";
 	}
   }
   [(set_attr "type" "fcmp")
-   (set_attr "mode" "<UNITMODE>")])
+   (set_attr "mode" "<UNITMODE>")
+   (set (attr "length") (symbol_ref "((Is_Gap9_Vega && (GET_MODE (operands[0])==OHFmode))?12:8)"))
+  ])
 
 (define_insn "f<quiet_pattern>_quiet<ANYF:mode><X:mode>4"
    [(set (match_operand:X         0 "register_operand" "=r")
