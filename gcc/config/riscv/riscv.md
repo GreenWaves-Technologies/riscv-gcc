@@ -45,6 +45,8 @@
   UNSPEC_COPYSIGN
   UNSPEC_LRINT
   UNSPEC_LROUND
+  UNSPEC_LROUND_DN
+  UNSPEC_LROUND_UP
 
   ;; Stack tie
   UNSPEC_TIE
@@ -456,9 +458,9 @@
 (define_mode_attr LDSTINDMODE [(V4QI "V4QI") (V2HI "V2HI") (V2HF "V2HF") (V2OHF "V2OHF") (SF "SF") (SI "SI") (HI "HI") (HF "HF") (OHF "OHF") (QI "QI")])
 
 ;; Iterator and attributes for floating-point rounding instructions.
-(define_int_iterator RINT [UNSPEC_LRINT UNSPEC_LROUND])
-(define_int_attr rint_pattern [(UNSPEC_LRINT "rint") (UNSPEC_LROUND "round")])
-(define_int_attr rint_rm [(UNSPEC_LRINT "dyn") (UNSPEC_LROUND "rmm")])
+(define_int_iterator RINT [UNSPEC_LRINT UNSPEC_LROUND UNSPEC_LROUND_DN UNSPEC_LROUND_UP])
+(define_int_attr rint_pattern [(UNSPEC_LRINT "rint") (UNSPEC_LROUND "round") (UNSPEC_LROUND_DN "rounddown") (UNSPEC_LROUND_UP "roundup")])
+(define_int_attr rint_rm [(UNSPEC_LRINT "dyn") (UNSPEC_LROUND "rmm") (UNSPEC_LROUND_DN "rdn") (UNSPEC_LROUND_UP "rup")])
 
 ;; Iterator and attributes for quiet comparisons.
 (define_int_iterator QUIET_COMPARISON [UNSPEC_FLT_QUIET UNSPEC_FLE_QUIET])

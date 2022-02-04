@@ -361,6 +361,18 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(smaxv2ohf3,         	f16altmax2,    	RISCV_V2OHF_FTYPE_V2OHF_V2OHF,          pulp_gap9, NULL)
   DIRECT_BUILTIN1(absv2ohf2,          	f16altabs2,	RISCV_V2OHF_FTYPE_V2OHF,          	pulp_gap9, NULL)
 
+  DIRECT_BUILTIN1(lroundsfsi2,		rintsf2,        RISCV_INT_FTYPE_SF,          		pulp_gap9, NULL)
+  DIRECT_BUILTIN1(lroundhfsi2,		rinthf2,    	RISCV_INT_FTYPE_HF,          		pulp_gap9, NULL)
+  DIRECT_BUILTIN1(lroundohfsi2,		rintohf2,   	RISCV_INT_FTYPE_OHF,          		pulp_gap9, NULL)
+
+  DIRECT_BUILTIN1(lrounddownsfsi2,	rdownsf2,       RISCV_INT_FTYPE_SF,          		pulp_gap9, NULL)
+  DIRECT_BUILTIN1(lrounddownhfsi2,	rdownhf2,    	RISCV_INT_FTYPE_HF,          		pulp_gap9, NULL)
+  DIRECT_BUILTIN1(lrounddownohfsi2,	rdownohf2,   	RISCV_INT_FTYPE_OHF,          		pulp_gap9, NULL)
+
+  DIRECT_BUILTIN1(lroundupsfsi2,	rupsf2,       RISCV_INT_FTYPE_SF,          		pulp_gap9, NULL)
+  DIRECT_BUILTIN1(lrounduphfsi2,	ruphf2,    	RISCV_INT_FTYPE_HF,          		pulp_gap9, NULL)
+  DIRECT_BUILTIN1(lroundupohfsi2,	rupohf2,   	RISCV_INT_FTYPE_OHF,          		pulp_gap9, NULL)
+
   DIRECT_BUILTIN1(unpack1_lo_h_b_s,	unpacklo_h_b_s,	RISCV_V2HI_FTYPE_V4QI,			pulp_gap9, NULL)
   DIRECT_BUILTIN1(unpack1_lo_h_b_u,	unpacklo_h_b_u,	RISCV_V2HI_FTYPE_V4QI,			pulp_gap9, NULL)
   DIRECT_BUILTIN1(unpack1_hi_h_b_s,	unpackhi_h_b_s,	RISCV_V2HI_FTYPE_V4QI,			pulp_gap9, NULL)
