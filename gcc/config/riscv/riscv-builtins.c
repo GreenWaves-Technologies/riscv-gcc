@@ -708,6 +708,11 @@ riscv_init_builtins (void)
                                                                i, BUILT_IN_MD, NULL, NULL);
 	  	riscv_builtin_decl_index[d->icode] = i;
                 switch (d->icode) {
+                        case CODE_FOR_pulp_omp_thread_num:
+                                Remapped_GOMP_Builtins[Head_Remapped_GOMP_Builtins].Gomp = BUILT_IN_OMP_GET_THREAD_NUM;
+                                Remapped_GOMP_Builtins[Head_Remapped_GOMP_Builtins].Pulp = i;
+                                Head_Remapped_GOMP_Builtins++;
+                                break;
                         case CODE_FOR_pulp_omp_barrier:
                                 Remapped_GOMP_Builtins[Head_Remapped_GOMP_Builtins].Gomp = BUILT_IN_GOMP_BARRIER;
                                 Remapped_GOMP_Builtins[Head_Remapped_GOMP_Builtins].Pulp = i;
@@ -971,14 +976,25 @@ riscv_expand_builtin_direct (const struct riscv_builtin_description *d, int buil
   return target;
 }
 
+/* Implement TARGET_NATIVE_OMP */
+
+int riscv_native_omp()
+
+{
+	if (TARGET_MASK_OPEN_NATIVE) return 1; else return 0;
+}
+
 /* Implement TARGET_REMAPPED_BUILTIN */
 
-static int
+int
 riscv_remapped_builtin(tree exp)
 
 {
+	/*
         tree fndecl = get_callee_fndecl (exp);
         enum built_in_function fcode = DECL_FUNCTION_CODE (fndecl);
+	*/
+        enum built_in_function fcode = DECL_FUNCTION_CODE (exp);
 
         if (TARGET_MASK_OPEN_NATIVE) {
                 fcode = (enum built_in_function) GetRemappedGompBuiltin(fcode, ARRAY_SIZE (riscv_builtins));

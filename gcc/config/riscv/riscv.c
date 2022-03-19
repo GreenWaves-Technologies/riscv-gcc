@@ -6455,6 +6455,9 @@ static void riscv_file_end (void)
 #undef TARGET_REMAPPED_BUILTIN
 #define TARGET_REMAPPED_BUILTIN riscv_remapped_builtin
 
+#undef TARGET_NATIVE_OMP
+#define TARGET_NATIVE_OMP riscv_native_omp
+
 #undef TARGET_OMP_TARGET_DECL
 #define TARGET_OMP_TARGET_DECL riscv_omp_target_decl
 

@@ -992,6 +992,31 @@ remove_exit_barriers (struct omp_region *region)
     }
 }
 
+/* Replace the call at *GSI with the gimple value VAL.  */
+
+static void
+replace_call_with_value (gimple_stmt_iterator *gsi, tree val)
+{
+  gimple *stmt = gsi_stmt (*gsi);
+  tree lhs = gimple_call_lhs (stmt);
+  gimple *repl;
+  if (lhs)
+    {
+      if (!useless_type_conversion_p (TREE_TYPE (lhs), TREE_TYPE (val)))
+        val = fold_convert (TREE_TYPE (lhs), val);
+      repl = gimple_build_assign (lhs, val);
+    }
+  else
+    repl = gimple_build_nop ();
+  tree vdef = gimple_vdef (stmt);
+  if (vdef && TREE_CODE (vdef) == SSA_NAME)
+    {
+      unlink_stmt_vdef (stmt);
+      release_ssa_name (vdef);
+    }
+  gsi_replace (gsi, repl, false);
+}
+
 /* Optimize omp_get_thread_num () and omp_get_num_threads ()
    calls.  These can't be declared as const functions, but
    within one parallel body they are constant, so they can be
@@ -1013,6 +1038,29 @@ optimize_omp_library_calls (gimple *entry_stmt)
 		      && omp_find_clause (gimple_omp_task_clauses (entry_stmt),
 					  OMP_CLAUSE_UNTIED) != NULL);
 
+
+  tree c, val;
+  location_t clause_loc;
+  tree clauses = gimple_code (entry_stmt) == GIMPLE_OMP_PARALLEL ? gimple_omp_parallel_clauses (entry_stmt) : 0;
+  c = clauses ? omp_find_clause (clauses, OMP_CLAUSE_NUM_THREADS) : 0;
+  unsigned HOST_WIDE_INT Nthreads;
+  int NumThreadsIsStatic = 0;
+  if (c && targetm.native_omp())
+    {
+      val = OMP_CLAUSE_NUM_THREADS_EXPR (c);
+      if (TREE_CODE (val) == INTEGER_CST) {
+	      Nthreads = tree_to_uhwi(val);
+      	      // printf("Found NUM_THREAD expr: %d -> %s, %lld CST\n", gimple_code(entry_stmt), gimple_code_name[gimple_code(entry_stmt)], Nthreads);
+	      NumThreadsIsStatic = 1;
+      }
+      /*
+        else printf("Found NUM_THREAD expr: %d -> %s\n", gimple_code(entry_stmt), gimple_code_name[gimple_code(entry_stmt)]);
+      debug_generic_expr(val);
+      printf("END Found NUM_THREAD expr:\n");
+      clause_loc = OMP_CLAUSE_LOCATION (c);
+      */
+    }
+
   FOR_EACH_BB_FN (bb, cfun)
     for (gsi = gsi_start_bb (bb); !gsi_end_p (gsi); gsi_next (&gsi))
       {
@@ -1026,19 +1074,42 @@ optimize_omp_library_calls (gimple *entry_stmt)
 	    && DECL_INITIAL (decl) == NULL)
 	  {
 	    tree built_in;
+	    int IsBuiltIn = gimple_call_builtin_p (call, BUILT_IN_NORMAL);
+	    enum built_in_function fcode = DECL_FUNCTION_CODE (decl);
+	    int Remapped_fcode = targetm.remapped_builtin(decl);
 
-	    if (DECL_NAME (decl) == thr_num_id)
-	      {
+	    /*
+      	    printf("Found DECL: IsBuiltIn: %d, fcode: %d, BUILT_IN_OMP_GET_NUM_THREADS: %d, BUILT_IN_OMP_GET_THREAD_NUM:%d, Remapped: %d\n",
+	           IsBuiltIn, fcode, BUILT_IN_OMP_GET_NUM_THREADS, BUILT_IN_OMP_GET_THREAD_NUM,
+	           Remapped_fcode);
+            if (Remapped_fcode != -1) {
+	      tree RemappedDecl = targetm.builtin_decl(Remapped_fcode, 0);
+	      if (RemappedDecl != error_mark_node) printf("Got Tree %s\n", (RemappedDecl!=0)?"EXIST":"EMPTY");
+	      else printf("Got error_mark_node\n");
+            }
+            debug_generic_expr(decl);
+	    */
+	    if (DECL_NAME (decl) == thr_num_id) {
 		/* In #pragma omp task untied omp_get_thread_num () can change
 		   during the execution of the task region.  */
 		if (untied_task)
 		  continue;
 		built_in = builtin_decl_explicit (BUILT_IN_OMP_GET_THREAD_NUM);
-	      }
-	    else if (DECL_NAME (decl) == num_thr_id)
-	      built_in = builtin_decl_explicit (BUILT_IN_OMP_GET_NUM_THREADS);
-	    else
-	      continue;
+	    } else if (DECL_NAME (decl) == num_thr_id) {
+		    if (NumThreadsIsStatic) {
+			    tree Cst = build_int_cst (integer_type_node, Nthreads);
+			    replace_call_with_value (&gsi, Cst);
+			    continue;
+		    } else built_in = builtin_decl_explicit (BUILT_IN_OMP_GET_NUM_THREADS);
+	    } else if (IsBuiltIn && (fcode == BUILT_IN_OMP_GET_NUM_THREADS) && NumThreadsIsStatic) {
+		    tree Cst = build_int_cst (integer_type_node, Nthreads);
+		    replace_call_with_value (&gsi, Cst);
+		    continue;
+	    } else if (Remapped_fcode != -1) {
+	      	    tree RemappedBuiltIn = targetm.builtin_decl(Remapped_fcode, 0);
+	    	    gimple_call_set_fndecl (call, RemappedBuiltIn);
+	      	    continue;
+	    } else continue;
 
 	    if (DECL_ASSEMBLER_NAME (decl) != DECL_ASSEMBLER_NAME (built_in)
 		|| gimple_call_num_args (call) != 0)

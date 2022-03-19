@@ -156,6 +156,7 @@
   UNSPECV_OMP_PULP_BARRIER
   UNSPECV_OMP_PULP_CRITICAL_START
   UNSPECV_OMP_PULP_CRITICAL_END
+  UNSPECV_OMP_PULP_THREAD_NUM
 
   ;; Forced read write, volatile
   UNSPECV_WRITESI_VOL
@@ -3792,6 +3793,18 @@
 
 
 ;; Open MP support
+
+(define_expand "pulp_omp_thread_num"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (unspec_volatile [(const_int 0)] UNSPECV_OMP_PULP_THREAD_NUM)
+   )
+  ]
+  "(Pulp_Cpu>=PULP_V2)"
+{
+	emit_insn(gen_read_spr(operands[0], gen_rtx_CONST_INT(SImode, 0xF14)));
+	DONE;
+}
+)
 
 (define_expand "pulp_omp_barrier"
   [(unspec_volatile [(const_int 0)] UNSPECV_OMP_PULP_BARRIER)]

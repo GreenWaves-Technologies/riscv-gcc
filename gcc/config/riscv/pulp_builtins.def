@@ -324,6 +324,7 @@ Currently these macros are used in 2 contexts:
   DIRECT_NO_TARGET_BUILTIN1(writesivol, write_base_off_v,RISCV_VOID_FTYPE_INT_INT_INT, 			pulp_vall, NULL)
   DIRECT_BUILTIN1(readsivol,		read_base_off_v,RISCV_INT_FTYPE_INT_INT,			pulp_vall, NULL)
 
+  DIRECT_BUILTIN1          (pulp_omp_thread_num,	pulp_GOMP_thread_num,		RISCV_INT_FTYPE_VOID,   pulp_v2, NULL)
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_barrier, 		pulp_GOMP_barrier,		RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL)
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_critical_start, 	pulp_GOMP_critical_start,	RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL)
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_critical_end, 	pulp_GOMP_critical_end,		RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL)
