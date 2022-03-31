@@ -868,13 +868,13 @@ riscv_classify_address (struct riscv_address_info *info, rtx x,
       if ((!Has_64Int && (GET_MODE_SIZE (mode) > UNITS_PER_WORD)) || ((TARGET_HARD_FLOAT&&!TARGET_FPREGS_ON_GRREGS) && (IsFloatMode(mode)))) return false;
       info->type = ADDRESS_REG_POST_INC;
       info->reg = XEXP (x, 0);
-      info->offset = XEXP (x, 1);
+      info->offset = 0; // XEXP (x, 1); POST_INC is unadic, offset is implicitely given by the type of the accessed operand
       return (riscv_valid_base_register_p (info->reg, mode, strict_p));
     case POST_DEC:
       if ((!Has_64Int && (GET_MODE_SIZE (mode) > UNITS_PER_WORD)) || ((TARGET_HARD_FLOAT&&!TARGET_FPREGS_ON_GRREGS) && (IsFloatMode(mode)))) return false;
       info->type = ADDRESS_REG_POST_DEC;
       info->reg = XEXP (x, 0);
-      info->offset = XEXP (x, 1);
+      info->offset = 0; // XEXP (x, 1); POST_DEC is unadic, offset is implicitely given by the type of the accessed operand
       return (riscv_valid_base_register_p (info->reg, mode, strict_p));
     case POST_MODIFY:
       if ((!Has_64Int && (GET_MODE_SIZE (mode) > UNITS_PER_WORD)) || ((TARGET_HARD_FLOAT&&!TARGET_FPREGS_ON_GRREGS) && (IsFloatMode(mode)))) return false;
