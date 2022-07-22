@@ -2420,6 +2420,22 @@
  (set_attr "mode" "SI")]
 )
 
+(define_insn "normRN<norm_sign>_si3"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (norm_op:SI
+                (plus:SI
+			(match_operand:SI 1 "register_operand" "r")
+                        (match_operand:SI 3 "immediate_operand" "i")
+                )
+                (match_operand:SI 2 "immediate_operand" "i")
+        )
+   )
+  ]
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[2], operands[3], 31))"
+  "p.add<norm_sign>RN \t%0,%1,zero,%2"
+[(set_attr "type" "arith")
+ (set_attr "mode" "SI")]
+)
 
 (define_insn "addRN<norm_sign>_reg_si3"
   [(set (match_operand:SI 0 "register_operand" "=r")
@@ -2439,6 +2455,24 @@
   ]
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND)"
   "p.add<norm_sign>RNr \t%0,%z2,%3"
+[(set_attr "type" "arith")
+ (set_attr "mode" "SI")]
+)
+
+
+(define_insn "normRN<norm_sign>_reg_si3"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (norm_op:SI
+                (plus:SI
+			(ashift:SI (const_int 1) (plus:SI (match_operand:SI 2 "register_operand" "r") (const_int -1)))
+                        (match_operand:SI 1 "register_operand" "0")
+                )
+                (match_dup 2)
+        )
+   )
+  ]
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND)"
+  "p.add<norm_sign>RNr \t%0,zero,%2"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -2746,7 +2780,7 @@
 	rtx xoperands[4];
 	HOST_WIDE_INT Mask = INTVAL(operands[2]);
 
-	xoperands[0] = operands[0]; xoperands[1] =
+	xoperands[0] = operands[0]; xoperands[1] = operands[1];
 	xoperands[2] = gen_rtx_CONST_INT (SImode, (Mask>>5)&0x1F);
 	xoperands[3] = gen_rtx_CONST_INT (SImode, (Mask)&0x1F);
 	output_asm_insn("p.extract\t%0,%1,%2,%3 # Bit extract signed", xoperands);
@@ -2772,7 +2806,7 @@
 	rtx xoperands[4];
 	HOST_WIDE_INT Mask = INTVAL(operands[2]);
 
-	xoperands[0] = operands[0]; xoperands[1] =
+	xoperands[0] = operands[0]; xoperands[1] = operands[1];
 	xoperands[2] = gen_rtx_CONST_INT (SImode, (Mask>>5)&0x1F);
 	xoperands[3] = gen_rtx_CONST_INT (SImode, (Mask)&0x1F);
 	output_asm_insn("p.extractu\t%0,%1,%2,%3 # Bit extract unsigned", xoperands);
@@ -4929,7 +4963,7 @@
     rtx RegTMP = gen_reg_rtx (V2HFmode);
     rtx ShiftVal = gen_reg_rtx (SImode);
     rtx Temp = gen_reg_rtx (V2HFmode);
-    emit_insn(gen_rtx_SET (ShiftVal, gen_rtx_CONST_INT(SImode, 2)));
+    emit_insn(gen_rtx_SET (ShiftVal, gen_rtx_CONST_INT(SImode, 16)));
     emit_insn(gen_movv2hf_internal(Temp, operands[1]));
     emit_insn(gen_lshrimmv2hf(Temp, Temp, ShiftVal));
     emit_insn(gen_movv2hf_internal(RegTMP, Temp));
@@ -4971,7 +5005,7 @@
     rtx RegTMP = gen_reg_rtx (V2OHFmode);
     rtx RegVal = gen_reg_rtx (SImode);
     rtx Temp = gen_reg_rtx (V2OHFmode);
-    emit_insn(gen_rtx_SET (RegVal, gen_rtx_CONST_INT(SImode, 2)));
+    emit_insn(gen_rtx_SET (RegVal, gen_rtx_CONST_INT(SImode, 16)));
     emit_insn(gen_movv2ohf_internal(Temp, operands[1]));
     emit_insn(gen_lshrimmv2ohf(Temp, Temp, RegVal));
     emit_insn(gen_movv2ohf_internal(RegTMP, Temp));
