@@ -465,8 +465,6 @@ emit_zcmp_popret (rtx_insn *pop_rtx,
     return;
   }
   // printf("%s %s\n", gen_popret_p?"popret":"", gen_popretz_p?"popretz":"");
-  return;
-
   gcc_assert ((gen_popret_p && !gen_popretz_p)
       || (gen_popretz_p && gen_popret_p));
 
