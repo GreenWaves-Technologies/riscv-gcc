@@ -83,6 +83,10 @@ extern int riscv_valid_bitrev_imm_op(rtx radix, rtx npoints);
 extern void riscv_bitrev_imm_op(rtx radix, rtx npoints, int *R, int *N);
 #endif
 
+namespace gcc { class context; }
+class rtl_opt_pass;
+extern rtl_opt_pass *make_pass_zcmp_popret (gcc::context *ctxt);
+
 extern void riscv_hardware_loop (void);
 extern int riscv_epilogue_uses(int regno);
 
@@ -106,6 +110,9 @@ extern bool riscv_filter_pulp_operand(rtx, bool);
 extern bool riscv_is_tiny_symbol_p (rtx addr);
 extern void riscv_output_external (FILE *file, tree decl, const char *name);
 
+extern bool riscv_valid_stack_push_pop_p (rtx, bool);
+extern bool riscv_output_popret_p (rtx);
+
 /* Routines implemented in riscv-c.c.  */
 void riscv_cpu_cpp_builtins (cpp_reader *);
 
@@ -119,5 +126,6 @@ extern void riscv_init_builtins (void);
 extern int riscv_remapped_builtin(tree);
 extern int riscv_native_omp();
 
+rtl_opt_pass * make_pass_zcmp_popret (gcc::context *ctxt);
 
 #endif /* ! GCC_RISCV_PROTOS_H */

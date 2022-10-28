@@ -361,6 +361,7 @@ along with GCC; see the file COPYING3.  If not see
 #define HARD_FRAME_POINTER_REGNUM 8
 #define STACK_POINTER_REGNUM 2
 #define THREAD_POINTER_REGNUM 4
+#define RETURN_VALUE_REGNUM 10
 
 /* These two registers don't really exist: they get eliminated to either
    the stack or hard frame pointer.  */
@@ -1036,5 +1037,7 @@ extern bool riscv_slow_unaligned_access;
 #define IMM64_REACH (1LL << IMM64_BITS)
 #define CONST_HIGH_PART(VALUE) (((VALUE) + (IMM_REACH/2)) & ~(IMM_REACH-1))
 #define CONST_LOW_PART(VALUE) ((VALUE) - CONST_HIGH_PART (VALUE))
+
+#define RISCV_ZCE_PUSH_POP_MASK 0x0ffc0302u
 
 #endif /* ! GCC_RISCV_H */

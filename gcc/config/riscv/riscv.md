@@ -172,11 +172,24 @@
 
 (define_constants
   [(RETURN_ADDR_REGNUM		1)
+   (SP_REGNUM                   2)
+   (GP_REGNUM                   3)
+   (TP_REGNUM                   4)
    (T0_REGNUM			5)
    (T1_REGNUM			6)
    (S0_REGNUM			8)
    (S1_REGNUM			9)
+   (A0_REGNUM                   10)
    (S2_REGNUM			18)
+   (S3_REGNUM                   19)
+   (S4_REGNUM                   20)
+   (S5_REGNUM                   21)
+   (S6_REGNUM                   22)
+   (S7_REGNUM                   23)
+   (S8_REGNUM                   24)
+   (S9_REGNUM                   25)
+   (S10_REGNUM                  26)
+   (S11_REGNUM                  27)
    (REG_LC0                     66)
    (REG_LC1                     67)
    (REG_LE0                     68)
@@ -8896,6 +8909,44 @@
   emit_insn (gen_blockage ());
   DONE;
 })
+
+
+;;
+;;  ....................
+;;
+;;	PUSH/POP multiple
+;;
+;;  ....................
+
+(define_insn "*stack_push<mode>"
+  [(match_parallel 0 "riscv_stack_push_operation"
+    [(set (reg:X SP_REGNUM) (plus:X (reg:X SP_REGNUM)
+      (match_operand:X 1 "const_int_operand" "")))])]
+  "Has_PushPop"
+  "cm.push\t{%L0},%1")
+
+(define_insn "*stack_pop<mode>"
+  [(match_parallel 0 "riscv_stack_pop_operation"
+    [(set (match_operand:X 1 "register_operand" "")
+      (mem:X (plus:X (reg:X SP_REGNUM)
+        (match_operand:X 2 "const_int_operand" ""))))])]
+  "Has_PushPop"
+  {
+    return riscv_output_popret_p (operands[0]) ?
+        "cm.popret\t{%L0},%s0" :
+        "cm.pop\t{%L0},%s0";
+  })
+
+(define_insn "*stack_pop_with_return_value<mode>"
+  [(match_parallel 0 "riscv_stack_pop_operation"
+    [(set (reg:ANYI A0_REGNUM)
+      (match_operand:ANYI 1 "pop_return_value_constant" ""))])]
+  "Has_PushPop"
+  {
+    gcc_assert (riscv_output_popret_p (operands[0]));
+    return "cm.popretz\t{%L0},%s0";
+  })
+
 
 (define_insn "nop"
   [(const_int 0)]

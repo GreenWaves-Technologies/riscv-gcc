@@ -332,6 +332,10 @@ mint64
 Target UInteger Var(Has_64Int) Init(0)
 Enable 64 bits integer extension
 
+mpushpop
+Target UInteger Var(Has_PushPop) Init(0)
+Enable push/pop multiple extension
+
 mvega
 Target UInteger Var(Is_Gap9_Vega) Init(0)
 Enable specific check when target is Gap9 Vega

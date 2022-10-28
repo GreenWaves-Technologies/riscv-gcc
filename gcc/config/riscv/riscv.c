@@ -167,6 +167,9 @@ struct GTY(())  riscv_frame_info {
   /* Likewise FPR X.  */
   unsigned int fmask;
 
+    /* How much the push/pop routines adjust sp (or 0 if unused).  */
+  unsigned push_pop_sp_adjust;
+
   /* How much the GPR save/restore routines adjust sp (or 0 if unused).  */
   unsigned save_libcall_adjustment;
 
@@ -353,6 +356,268 @@ static const struct riscv_cpu_info riscv_cpu_info_table[] = {
 };
 
 static unsigned int MaxArgInReg = MAX_ARGS_IN_REGISTERS;
+
+
+/* Order for the CLOBBERs/USEs of push/pop.  */
+static const unsigned push_save_reg_order[] = {
+  INVALID_REGNUM, RETURN_ADDR_REGNUM, S0_REGNUM,
+  S1_REGNUM, S2_REGNUM, S3_REGNUM, S4_REGNUM,
+  S5_REGNUM, S6_REGNUM, S7_REGNUM, S8_REGNUM,
+  S9_REGNUM, S10_REGNUM, S11_REGNUM
+};
+
+static bool
+riscv_check_regno(rtx pat, unsigned regno)
+{
+  return REG_P (pat)
+      && REGNO (pat) == regno;
+}
+
+namespace {
+
+	/*
+  1. preprocessing:
+    1.1. if there is no push rtx, then just return. e.g.
+    (note 5 1 22 2 [bb 2] NOTE_INSN_BASIC_BLOCK)
+    (insn/f 22 5 23 2 (set (reg/f:SI 2 sp)
+      (plus:SI (reg/f:SI 2 sp)
+        (const_int -32 [0xffffffffffffffe0])))
+    (nil))
+    (note 23 22 2 2 NOTE_INSN_PROLOGUE_END)
+    1.2. if push rtx exists, then we compute the number of
+    pushed s-registers, n_sreg.
+
+  push rtx should be find before NOTE_INSN_PROLOGUE_END tag
+
+  [2 and 3 happend simultaneously]
+  2. find valid move pattern, mv sN, aN, where N < n_sreg,
+    and aN is not used the move pattern, and sN is not
+    defined before the move pattern (from prologue to the
+    position of move pattern).
+  3. analysis use and reach of every instruction from prologue
+    to the position of move pattern.
+    if any sN is used, then we mark the corresponding argument list
+    candidate as invalid.
+    e.g.
+        push  {ra,s0-s3}, {}, -32
+        sw      s0,44(sp) # s0 is used, then argument list is invalid
+        mv      a0,a5     # a0 is defined, then argument list is invalid
+        ...
+        mv      s0,a0
+        mv      s1,a1
+        mv      s2,a2
+
+  4. if there is a valid argument list, then replace the pop
+    push parallel insn, and delete mv pattern.
+     if not, skip.
+*/
+
+static const pass_data pass_data_zcmp_popret =
+{
+  RTL_PASS, /* type */
+  "" , /* name zcmp-popret, patched after */
+  OPTGROUP_NONE, /* optinfo_flags */
+  TV_NONE, /* tv_id */
+  0, /* properties_required */
+  0, /* properties_provided */
+  0, /* properties_destroyed */
+  0, /* todo_flags_start */
+  0, /* todo_flags_finish */
+};
+
+class pass_zcmp_popret : public rtl_opt_pass
+{
+public:
+  pass_zcmp_popret (gcc::context *ctxt, const char *name)
+    : rtl_opt_pass (pass_data_zcmp_popret, ctxt)
+  {
+	  this->name = name;
+  }
+
+  void zcmp_popret(function *);
+  /* opt_pass methods: */
+  virtual bool gate (function *) { return Has_PushPop; }
+  virtual unsigned int execute (function *func)
+    {
+      zcmp_popret (func);
+      return 0;
+    }
+}; // class pass_zcmp_popret
+
+} // anon namespace
+
+rtl_opt_pass *
+make_pass_zcmp_popret (gcc::context *ctxt)
+{
+  return new pass_zcmp_popret (ctxt, "riscv-zcmp-popret");
+}
+
+static void
+emit_zcmp_popret (rtx_insn *pop_rtx,
+                  rtx_insn **candidates,
+                  basic_block bb)
+{
+  bool gen_popretz_p = candidates [0];
+  bool gen_popret_p = candidates [2];
+
+  // printf("Entering emit_zcmp_popret\n");
+  if (!(gen_popret_p || gen_popretz_p)) {
+    return;
+  }
+  // printf("%s %s\n", gen_popret_p?"popret":"", gen_popretz_p?"popretz":"");
+  return;
+
+  gcc_assert ((gen_popret_p && !gen_popretz_p)
+      || (gen_popretz_p && gen_popret_p));
+
+  rtx pop_pat = PATTERN (pop_rtx);
+  unsigned pop_idx = 0, popret_idx = 0;
+  unsigned n_pop_par = XVECLEN (pop_pat, 0);
+  unsigned n_popret_par = n_pop_par
+        + (gen_popretz_p ? 2 : 0)
+        + (gen_popret_p ? 2 : 0);
+
+  rtx popret_par = gen_rtx_PARALLEL (VOIDmode,
+          rtvec_alloc (n_popret_par));
+
+  /* return zero pattern */
+  if (gen_popretz_p)
+    {
+      XVECEXP (popret_par, 0, 0) = PATTERN (candidates[0]);
+      XVECEXP (popret_par, 0, 1) = PATTERN (candidates[1]);
+      popret_idx += 2;
+      delete_insn (candidates[0]);
+      delete_insn (candidates[1]);
+    }
+
+  /* copy pop paruence.  */
+  for (; pop_idx < n_pop_par;
+      pop_idx ++, popret_idx ++)
+    {
+      XVECEXP (popret_par, 0, popret_idx) =
+          XVECEXP (pop_pat, 0, pop_idx);
+    }
+
+  /* ret pattern.  */
+  rtx ret_pat = PATTERN (candidates[2]);
+  gcc_assert (GET_CODE (ret_pat) == PARALLEL);
+
+  for (int i = 0; i < XVECLEN (ret_pat, 0);
+      i++, popret_idx++)
+  {
+    XVECEXP (popret_par, 0, popret_idx) =
+        XVECEXP (ret_pat, 0, i);
+  }
+
+  rtx_insn *insn = emit_jump_insn_after (
+          popret_par,
+          BB_END (bb));
+  JUMP_LABEL (insn) = simple_return_rtx;
+
+  REG_NOTES (insn) = REG_NOTES (pop_rtx);
+  RTX_FRAME_RELATED_P (insn) = 1;
+
+  if (dump_file)
+    {
+      fprintf(dump_file, "new insn:\n");
+      print_rtl (dump_file, insn);
+    }
+
+  delete_insn (candidates [2]);
+  delete_insn (pop_rtx);
+}
+
+void pass_zcmp_popret::zcmp_popret (function *func)
+{
+  basic_block bb;
+  rtx_insn *insn = NULL, *pop_rtx = NULL;
+  rtx_insn *pop_candidates[3] = {NULL, };
+  /*
+    find NOTE_INSN_EPILOGUE_BEG, but pop_rtx not found => return
+    find NOTE_INSN_EPILOGUE_BEG, and pop_rtx is found => looking for a0
+  */
+
+  // printf("Entering %s\n", current_function_name());
+  FOR_EACH_BB_REVERSE_FN (bb, func)
+  {
+    FOR_BB_INSNS_REVERSE (bb, insn)
+      {
+        if (!pop_rtx
+            && NOTE_P (insn)
+            && NOTE_KIND (insn) == NOTE_INSN_EPILOGUE_BEG)
+          return;
+
+        if (NOTE_P (insn)
+            && NOTE_KIND (insn) == NOTE_INSN_FUNCTION_BEG)
+          {
+            if (pop_rtx)
+              emit_zcmp_popret (pop_rtx, pop_candidates, bb);
+            return;
+          };
+
+        if (!(NONDEBUG_INSN_P (insn)
+            || CALL_P (insn)))
+          continue;
+
+        rtx pop_pat = PATTERN (insn);
+
+        if (GET_CODE (pop_pat) == PARALLEL
+            && riscv_valid_stack_push_pop_p (pop_pat, false))
+          {
+            pop_rtx = insn;
+            continue;
+          }
+
+        /* pattern for `ret`.  */
+        if (JUMP_P (insn)
+            && GET_CODE (pop_pat) == PARALLEL
+            && XVECLEN (pop_pat, 0) == 2
+            && GET_CODE (XVECEXP (pop_pat, 0, 0)) == SIMPLE_RETURN
+            && GET_CODE (XVECEXP (pop_pat, 0, 1)) == USE)
+          {
+            rtx use_reg = XEXP (XVECEXP (pop_pat, 0, 1), 0);
+            if (REG_P (use_reg)
+              && REGNO (use_reg) == RETURN_ADDR_REGNUM)
+              {
+                pop_candidates [2] = insn;
+                continue;
+              }
+          }
+
+        if (!pop_rtx)
+          continue;
+
+        /* pattern for return value.  */
+        if (!pop_candidates [0]
+            && GET_CODE (pop_pat) == USE)
+          {
+            rtx_insn *set_insn = PREV_INSN (insn);
+            rtx pat_set = PATTERN (set_insn);
+
+            if (riscv_check_regno (XEXP (pop_pat, 0),
+                    RETURN_VALUE_REGNUM)
+                && insn
+                && pat_set != NULL
+                && GET_CODE (pat_set) == SET
+                && riscv_check_regno (SET_DEST (pat_set),
+                       RETURN_VALUE_REGNUM)
+                && CONST_INT_P (SET_SRC (pat_set))
+                && INTVAL (SET_SRC (pat_set)) == 0)
+              {
+                pop_candidates [0] = set_insn;
+                pop_candidates [1] = insn;
+                break;
+              }
+          }
+      }
+
+    if (pop_rtx)
+      {
+        emit_zcmp_popret (pop_rtx, pop_candidates, bb);
+        return;
+      }
+  }
+}
 
 /* Return the riscv_cpu_info entry for the given name string.  */
 
@@ -2157,6 +2422,18 @@ riscv_output_move (rtx dest, rtx src)
     }
   gcc_unreachable ();
 }
+
+bool
+riscv_output_popret_p (rtx op)
+{
+  unsigned n_rtx = XVECLEN (op, 0);
+  rtx use = XVECEXP (op, 0, n_rtx - 1);
+  rtx ret = XVECEXP (op, 0, n_rtx - 2);
+
+    return GET_CODE (ret) == SIMPLE_RETURN
+        &&  GET_CODE (use) == USE;
+}
+
 
 /* Return true if CMP1 is a suitable second operand for integer ordering
    test CODE.  See also the *sCC patterns in riscv.md.  */
@@ -3727,6 +4004,75 @@ riscv_memmodel_needs_release_fence (enum memmodel model)
     }
 }
 
+/* Print Sp adjustment field of pop instruction.  */
+
+static void
+riscv_print_pop_size (FILE *file, rtx op)
+{
+  unsigned sp_adjust_idx = XVECLEN (op, 0) - 1;
+  rtx sp_adjust_rtx = XVECEXP (op, 0, sp_adjust_idx);
+
+  /* Skip ret or pattern.  */
+  while (GET_CODE (sp_adjust_rtx) != SET)
+    sp_adjust_rtx = XVECEXP (op, 0, --sp_adjust_idx);
+
+  rtx elt_plus = SET_SRC (sp_adjust_rtx);
+  fprintf (file, "%ld", INTVAL (XEXP (elt_plus, 1)));
+}
+
+/* Print push/pop register list. */
+
+static void
+riscv_print_reglist (FILE *file, rtx op)
+
+{
+  /* we only deal with three formats:
+      push {ra}
+      push {ra, s0}
+      push {ra, s0-sN}
+    or
+      pop {ra}
+      pop {ra, s0}
+      pop {ra, s0-sN}
+    registers except ra has to be continuous s-register,
+    and it is supposed to be checked before.
+    register list patterns in push:
+    (set/f (mem/c:SI
+      (plus:SI (reg/f:SI 2 sp)
+        (const_int 28 [0x1c])) [2  S4 A32])
+      (reg:SI 1 ra))
+    register list patterns in pop:
+    (set/f (reg:DI 1 ra)
+      (mem/c:DI (plus:DI (reg/f:DI 2 sp)
+        (const_int 8 [0x8])) [2  S8 A64]))
+  */
+  int total_count = XVECLEN (op, 0);
+  int n_regs = 0;
+  bool push_p = GET_CODE (XVECEXP (op, 0, 0)) == SET
+      && GET_CODE (SET_SRC (XVECEXP (op, 0, 0))) == PLUS;
+
+  for (int idx = 0; idx < total_count; ++idx)
+    {
+      rtx ele = XVECEXP (op, 0, idx);
+      if (GET_CODE (ele) != SET)
+        continue;
+
+      bool restore_save_p = push_p ?
+          MEM_P (SET_DEST (ele)) :
+          MEM_P (SET_SRC (ele));
+
+      if (restore_save_p)
+        n_regs ++;
+    }
+
+  if (n_regs > 2)
+    fprintf (file, "ra,s0-s%u", n_regs - 2);
+  else if (n_regs > 1)
+    fprintf (file, "ra,s0");
+  else
+    fputs("ra", file);
+}
+
 /* Implement TARGET_PRINT_OPERAND.  The RISCV-specific operand codes are:
 
    'h'	Print the high-part relocation associated with OP, after stripping
@@ -3810,6 +4156,15 @@ riscv_print_operand (FILE *file, rtx op, int letter)
         fprintf (file, "%d", (int) Val);
         break;
       }
+     case 'L':
+        riscv_print_reglist (file, op);
+        break;
+     case 's':
+        riscv_print_pop_size (file, op);
+        break;
+
+
+
 
     default:
       switch (code)
@@ -4054,6 +4409,66 @@ riscv_save_reg_p (unsigned int regno, unsigned int is_it)
 #endif
 }
 
+/* Determine how many instructions related to push/pop instructions.  */
+
+static unsigned
+riscv_save_push_pop_count (unsigned mask)
+{
+  if (!BITSET_P (mask, GP_REG_FIRST + RETURN_ADDR_REGNUM))
+    return 0;
+  for (unsigned n = GP_REG_LAST; n > GP_REG_FIRST; n--)
+    if (BITSET_P (mask, n)
+        && !call_used_regs [n])
+      /* add ra saving and sp adjust. */
+      return CALLEE_SAVED_REG_NUMBER (n) + 1 + 2;
+  abort ();
+}
+
+/* Calculate the maximum sp adjustment of push/pop instruction. */
+
+static unsigned
+riscv_push_pop_base_sp_adjust (unsigned mask)
+{
+  unsigned n_regs = riscv_save_push_pop_count (mask) - 1;
+  return (n_regs * UNITS_PER_WORD + 15) & (~0xf);
+}
+
+/* Determine whether to call push/pop routines.  */
+
+static bool
+riscv_use_push_pop (const struct riscv_frame_info *frame, const HOST_WIDE_INT frame_size)
+{
+  if (!Has_PushPop)
+    return false;
+
+  /* We do not handler variable argument cases currently.  */
+  if (cfun->machine->varargs_size != 0)
+    return false;
+
+  HOST_WIDE_INT base_size = riscv_push_pop_base_sp_adjust (frame->mask);
+  /*
+     Pr 960215-1.c in rv64 ouputs
+
+        addi    sp,sp,-32
+        sd      ra,24(sp)
+        sd      s0,16(sp)
+        sd      s2,8(sp)
+        sd      s3,0(sp)
+     it is a rare case that callee saved registers are not non-continous,
+     which breaks the old push implementation, and we just reject this case
+     like save-restore does now.
+  */
+  if (base_size > frame_size)
+    return false;
+
+  /* {ra,s0-s10} is invalid. */
+  if (frame->mask & (1 << (S10_REGNUM - GP_REG_FIRST))
+      && !(frame->mask & (1 << (S11_REGNUM - GP_REG_FIRST))))
+    return false;
+
+  return frame->mask & (1 << (RETURN_ADDR_REGNUM - GP_REG_FIRST));
+}
+
 /* Determine whether to call GPR save/restore routines.  */
 static bool
 riscv_use_save_libcall (const struct riscv_frame_info *frame)
@@ -4130,7 +4545,9 @@ riscv_compute_frame_info (void)
   frame->is_it = cfun->machine->is_interrupt;
   if (Trace) fprintf(stderr, "- %30s ----FRAME INFOS---------------------\n", current_function_name());
 
-  if (Trace) fprintf(stderr, "Setting up frame info, is_it: %s (%X)\n", frame->is_it?"Yes":"No", frame->is_it);
+  if (Trace) fprintf(stderr, "Setting up frame info, is_it: %s (%X), PushPop: %s\n",
+		     frame->is_it?"Yes":"No", frame->is_it,
+		     Has_PushPop?"Yes":"No");
   /* Find out which GPRs we need to save.  */
   for (regno = GP_REG_FIRST; regno <= GP_REG_LAST; regno++)
     if (riscv_save_reg_p (regno, frame->is_it)) {
@@ -4223,6 +4640,7 @@ riscv_compute_frame_info (void)
     if (Trace) fprintf(stderr, "hard frame pt offset != Final frame size, => Disabling runtime save \n");
     frame->save_libcall_adjustment = 0;
   }
+  frame->push_pop_sp_adjust = 0;
   if (Trace) fprintf(stderr, "---------------------------------------------------------------------------\n");
 }
 
@@ -4298,12 +4716,20 @@ typedef void (*riscv_save_restore_fn) (rtx, rtx);
    mode and OFFSET is the offset of its save slot from the current
    stack pointer.  */
 
+static void riscv_save_reg (rtx reg, rtx mem);
+
 static void
 riscv_save_restore_reg (enum machine_mode mode, int regno,
 		       HOST_WIDE_INT offset, riscv_save_restore_fn fn)
 {
   rtx mem;
+  static bool Trace=false;
 
+  if (Trace) {
+         fprintf(stderr, "\t%9s r%3d %5s at offset %d\n",
+			 (fn == riscv_save_reg)?"SAVE":"RESTORE",
+                         regno, reg_names[regno], (int) offset);
+  }
   mem = gen_frame_mem (mode, plus_constant (Pmode, stack_pointer_rtx, offset));
   fn (gen_rtx_REG (mode, regno), mem);
 }
@@ -4419,6 +4845,83 @@ riscv_output_gpr_save (unsigned mask)
   return s;
 }
 
+static void
+riscv_emit_pop_insn (struct riscv_frame_info *frame, HOST_WIDE_INT offset, HOST_WIDE_INT size)
+{
+  unsigned int veclen = riscv_save_push_pop_count (frame->mask);
+  unsigned int n_reg = veclen - 1;
+  rtvec vec = rtvec_alloc (veclen);
+  HOST_WIDE_INT sp_adjust;
+  rtx dwarf = NULL_RTX;
+
+  const unsigned *reg_order = push_save_reg_order;
+
+  gcc_assert (n_reg >= 1
+        && Has_PushPop
+        && (n_reg <= ARRAY_SIZE (push_save_reg_order)));
+
+  /* sp adjust pattern */
+  int max_allow_sp_adjust = riscv_push_pop_base_sp_adjust (frame->mask) + 48;
+  int aligned_size = size;
+
+  /* if sp adjustment is too large, we should split it first. */
+  if (aligned_size > max_allow_sp_adjust)
+    {
+      rtx dwarf_pre_sp_adjust = NULL_RTX;
+      rtx pre_adjust_rtx = gen_add3_insn (stack_pointer_rtx,
+                        stack_pointer_rtx,
+                        GEN_INT (aligned_size - max_allow_sp_adjust));
+      rtx insn = emit_insn (pre_adjust_rtx);
+
+      rtx cfa_pre_adjust_rtx = gen_rtx_PLUS (Pmode, stack_pointer_rtx,
+                        GEN_INT (aligned_size - max_allow_sp_adjust));
+      dwarf_pre_sp_adjust = alloc_reg_note (REG_CFA_DEF_CFA,
+                cfa_pre_adjust_rtx,
+                dwarf_pre_sp_adjust);
+
+      RTX_FRAME_RELATED_P (insn) = 1;
+      REG_NOTES (insn) = dwarf_pre_sp_adjust;
+
+      sp_adjust = max_allow_sp_adjust;
+    }
+  else
+    sp_adjust = (aligned_size + 15) & (~0xf);
+
+  /* register save sequence. */
+  for (unsigned i = 1; i < veclen; ++i)
+    {
+      offset -= UNITS_PER_WORD;
+      unsigned regno = reg_order[i];
+      rtx reg = gen_rtx_REG (Pmode, regno);
+      rtx mem = gen_frame_mem (Pmode, plus_constant (Pmode,
+              stack_pointer_rtx,
+              offset));
+      rtx set = gen_rtx_SET (reg, mem);
+      RTVEC_ELT (vec, i - 1) = set;
+      RTX_FRAME_RELATED_P (set) = 1;
+      dwarf = alloc_reg_note (REG_CFA_RESTORE, reg, dwarf);
+    }
+
+  /* sp adjust pattern */
+  rtx adjust_sp_rtx
+      = gen_rtx_SET (stack_pointer_rtx,
+            plus_constant (Pmode,
+                stack_pointer_rtx,
+                sp_adjust));
+  RTVEC_ELT (vec, veclen - 1) = adjust_sp_rtx;
+
+  rtx cfa_adjust_rtx = gen_rtx_PLUS (Pmode, stack_pointer_rtx,
+        const0_rtx);
+  dwarf = alloc_reg_note (REG_CFA_DEF_CFA, cfa_adjust_rtx, dwarf);
+
+  frame->gp_sp_offset -= (veclen - 1) * UNITS_PER_WORD;
+  frame->push_pop_sp_adjust = sp_adjust;
+
+  rtx insn = emit_insn (gen_rtx_PARALLEL (VOIDmode, vec));
+  RTX_FRAME_RELATED_P (insn) = 1;
+  REG_NOTES (insn) = dwarf;
+}
+
 /* For stack frames that can't be allocated with a single ADDI instruction,
    compute the best value to initially allocate.  It must at a minimum
    allocate enough space to spill the callee-saved registers.  */
@@ -4490,6 +4993,137 @@ riscv_emit_stack_tie (void)
     emit_insn (gen_stack_tiedi (stack_pointer_rtx, hard_frame_pointer_rtx));
 }
 
+
+/* Function to check whether the OP is a valid stack push/pop operation.
+   This part is borrowed from nds32 nds32_valid_stack_push_pop_p */
+
+bool
+riscv_valid_stack_push_pop_p (rtx op, bool push_p)
+{
+  int index;
+  int total_count;
+  int sp_adjust_rtx_index;
+  rtx elt;
+  rtx elt_reg;
+  rtx elt_plus;
+
+  if (!Has_PushPop)
+    return false;
+
+  total_count = XVECLEN (op, 0);
+  sp_adjust_rtx_index = push_p ? 0 : total_count - 1;
+
+  /* At least sp + one callee save/restore register rtx */
+  if (total_count < 2)
+    return false;
+
+  /* Perform some quick check for that every element should be 'set',
+     for pop, it might contain `ret` and `ret value` pattern.  */
+  for (index = 0; index < total_count; index++)
+    {
+      elt = XVECEXP (op, 0, index);
+
+      /* skip pop return value rtx */
+      if (!push_p && GET_CODE (elt) == SET
+          && riscv_check_regno (SET_DEST (elt), RETURN_VALUE_REGNUM)
+          && total_count >= 4
+          && index + 1 < total_count
+          && GET_CODE (XVECEXP (op, 0, index + 1)) == USE)
+        {
+          rtx use_reg = XEXP (XVECEXP (op, 0, index + 1), 0);
+
+          if (!riscv_check_regno (use_reg, RETURN_VALUE_REGNUM))
+            return false;
+
+          index += 1;
+          continue;
+        }
+      /* skip ret rtx */
+      if (!push_p && GET_CODE (elt) == SIMPLE_RETURN
+          && total_count >= 4
+          && index + 1 < total_count
+          && GET_CODE (XVECEXP (op, 0, index + 1)) == USE)
+        {
+          rtx use_reg = XEXP (XVECEXP (op, 0, index + 1), 0);
+
+          if (!riscv_check_regno (use_reg, RETURN_ADDR_REGNUM))
+            return false;
+
+          index += 1;
+          sp_adjust_rtx_index -= 2;
+          continue;
+        }
+
+      if (GET_CODE (elt) != SET)
+        return false;
+    }
+
+  elt = XVECEXP (op, 0, sp_adjust_rtx_index);
+  elt_reg  = SET_DEST (elt);
+  elt_plus = SET_SRC (elt);
+
+  /* Check this is (set (stack_reg) (plus stack_reg const)) pattern.  */
+  if (GET_CODE (elt_plus) != PLUS
+      || !riscv_check_regno (elt_reg, STACK_POINTER_REGNUM))
+    return false;
+
+  /* Pass all test, this is a valid rtx.  */
+  return true;
+}
+
+/* Generate push/pop rtx */
+
+
+static void
+riscv_emit_push_insn (struct riscv_frame_info *frame, HOST_WIDE_INT size)
+{
+  unsigned int veclen = riscv_save_push_pop_count (frame->mask);
+  unsigned int n_reg = veclen - 1;
+  rtvec vec = rtvec_alloc (veclen);
+
+  const unsigned *reg_order = push_save_reg_order;
+
+  int aligned_size = (size + 15) & (~0xf);
+
+  gcc_assert (n_reg >= 1
+        && (Has_PushPop)
+        && (n_reg <= ARRAY_SIZE (push_save_reg_order)));
+
+  /* sp adjust pattern */
+  int max_allow_sp_adjust = riscv_push_pop_base_sp_adjust (frame->mask) + 48;
+  int sp_adjust = aligned_size > max_allow_sp_adjust ?
+      max_allow_sp_adjust
+      : aligned_size;
+
+  /*TODO: move this part to frame computation function. */
+  frame->gp_sp_offset = (veclen - 1) * UNITS_PER_WORD;
+  frame->push_pop_sp_adjust = sp_adjust;
+
+  rtx adjust_sp_rtx
+      = gen_rtx_SET (stack_pointer_rtx,
+            plus_constant (Pmode,
+            stack_pointer_rtx,
+            -sp_adjust));
+  RTVEC_ELT (vec, 0) = adjust_sp_rtx;
+
+  /* Register save sequence. */
+  for (unsigned i = 1; i < veclen; ++i)
+    {
+      sp_adjust -= UNITS_PER_WORD;
+      unsigned regno = reg_order[i];
+      rtx reg = gen_rtx_REG (Pmode, regno);
+      rtx mem = gen_frame_mem (Pmode, plus_constant (Pmode,
+              stack_pointer_rtx,
+              sp_adjust));
+      rtx set = gen_rtx_SET (mem, reg);
+      RTVEC_ELT (vec, i) = set;
+      RTX_FRAME_RELATED_P (set) = 1;
+    }
+
+  rtx insn = emit_insn (gen_rtx_PARALLEL (VOIDmode, vec));
+  RTX_FRAME_RELATED_P (insn) = 1;
+}
+
 /* Expand the "prologue" pattern.  */
 
 void
@@ -4527,10 +5161,21 @@ riscv_expand_prologue (void)
       REG_NOTES (insn) = dwarf;
     }
 
+  HOST_WIDE_INT step1 = MIN (size, riscv_first_stack_step (frame));
+
+  if (riscv_use_push_pop (frame, step1))
+    {
+      if (Trace) fprintf(stderr, "Using PUSH POP\n");
+      riscv_emit_push_insn (frame, step1);
+
+      step1 = MAX (step1 - frame->push_pop_sp_adjust, 0);
+      size = MAX (size - frame->push_pop_sp_adjust, 0);
+      frame->mask &= ~RISCV_ZCE_PUSH_POP_MASK;
+    }
+
   /* Save the registers.  */
   if ((frame->mask | frame->fmask) != 0)
     {
-      HOST_WIDE_INT step1 = MIN (size, riscv_first_stack_step (frame));
 
       if (Trace) fprintf(stderr, "Adjusting SP by = %d, remains %d\n", (int) (-step1), (int) (size-step1));
       insn = gen_add3_insn (stack_pointer_rtx,
@@ -4723,9 +5368,19 @@ riscv_expand_epilogue (bool sibcall_p)
   HOST_WIDE_INT step1 = frame->total_size;
   HOST_WIDE_INT step2 = 0;
   bool use_restore_libcall = !sibcall_p && riscv_use_save_libcall (frame);
+  bool use_zcmp_pop = !use_restore_libcall && !(crtl->calls_eh_return);
   rtx ra = gen_rtx_REG (Pmode, RETURN_ADDR_REGNUM);
   rtx insn;
 
+  static bool Trace=false;
+
+  if (Trace) {
+        fprintf(stderr, "\n");
+        fprintf(stderr, "- %30s ----Expand Epilogue ---------------\n", current_function_name());
+
+        fprintf(stderr, "\n");
+        fprintf(stderr, "Total Frame Size = %d\n", (int) step1);
+  }
   /* We need to add memory barrier to prevent read from deallocated stack.  */
   bool need_barrier_p = (get_frame_size ()
 			 + cfun->machine->frame.arg_pointer_offset) != 0;
@@ -4742,6 +5397,7 @@ riscv_expand_epilogue (bool sibcall_p)
 
   if (!sibcall_p && riscv_can_use_return_insn ())
     {
+     if (Trace) fprintf(stderr, "Frame Size = 0 => Can use return\n");
      if (frame->is_it) {
         // if (Pulp_Cpu>=PULP_V2) {
                 if      (frame->is_it & 0x2) emit_jump_insn (gen_simple_itu_return ());
@@ -4760,6 +5416,9 @@ riscv_expand_epilogue (bool sibcall_p)
       riscv_emit_stack_tie ();
       need_barrier_p = false;
 
+     if (Trace) {
+	     fprintf(stderr, "Move after past and dynamic alloc, frame adjust: %d\n", (int) -frame->hard_frame_pointer_offset);
+     }
       rtx adjust = GEN_INT (-frame->hard_frame_pointer_offset);
       if (!SMALL_OPERAND (INTVAL (adjust)))
 	{
@@ -4787,6 +5446,9 @@ riscv_expand_epilogue (bool sibcall_p)
   if ((frame->mask | frame->fmask) != 0)
     {
       step2 = riscv_first_stack_step (frame);
+     if (Trace) {
+	     fprintf(stderr, "Remove first step from frame %d => %d\n", (int) step1, (int) step2);
+     }
       step1 -= step2;
     }
 
@@ -4808,6 +5470,9 @@ riscv_expand_epilogue (bool sibcall_p)
       insn = emit_insn (
 	       gen_add3_insn (stack_pointer_rtx, stack_pointer_rtx, adjust));
 
+     if (Trace) {
+	     fprintf(stderr, "Adjust frame by %d\n", (int) step1);
+     }
       rtx dwarf = NULL_RTX;
       rtx cfa_adjust_rtx = gen_rtx_PLUS (Pmode, stack_pointer_rtx,
 					 GEN_INT (step2));
@@ -4820,6 +5485,17 @@ riscv_expand_epilogue (bool sibcall_p)
 
   if (use_restore_libcall)
     frame->mask = 0; /* Temporarily fib that we need not save GPRs.  */
+
+    if (use_zcmp_pop && riscv_use_push_pop (frame, step2))
+    {
+      /* Emit a barrier to prevent loads from a deallocated stack.  */
+      riscv_emit_stack_tie ();
+      need_barrier_p = false;
+      riscv_emit_pop_insn (frame, frame->total_size, step2);
+      frame->mask &= ~RISCV_ZCE_PUSH_POP_MASK;
+      step2 = 0;
+    }
+
 
   /* Restore the registers.  */
   riscv_for_each_saved_reg (frame->total_size - step2, riscv_restore_reg);
@@ -4834,9 +5510,15 @@ riscv_expand_epilogue (bool sibcall_p)
   if (need_barrier_p)
     riscv_emit_stack_tie ();
 
+    if (use_zcmp_pop) frame->mask = mask;
+
+
   /* Deallocate the final bit of the frame.  */
   if (step2 > 0)
     {
+     if (Trace) {
+	     fprintf(stderr, "Final Adjust frame by %d\n", (int) step2);
+     }
       insn = emit_insn (gen_add3_insn (stack_pointer_rtx, stack_pointer_rtx,
 				       GEN_INT (step2)));
 
@@ -4875,6 +5557,7 @@ riscv_expand_epilogue (bool sibcall_p)
       // } else emit_jump_insn (gen_simple_it_return ());
     } else emit_jump_insn (gen_simple_return_internal (ra));
   }
+  if (Trace) fprintf(stderr, "----------------------------------- DONE ------------------------\n");
 }
 
 /* Functions to save and restore machine-specific function data.  */
