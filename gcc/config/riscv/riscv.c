@@ -4460,9 +4460,21 @@ riscv_use_push_pop (const struct riscv_frame_info *frame, const HOST_WIDE_INT fr
     return false;
 
   /* {ra,s0-s10} is invalid. */
+  /* We can skip this test since now encoding is
+   	0	ra, s0-s11
+	4	ra
+	5	ra, s0
+	6	ra, s0-s1
+	...
+	13	ra, s0-s8
+	14	ra, s0-s9
+	15	ra, s0-s10
+  */
+  /*
   if (frame->mask & (1 << (S10_REGNUM - GP_REG_FIRST))
       && !(frame->mask & (1 << (S11_REGNUM - GP_REG_FIRST))))
     return false;
+  */
 
   return frame->mask & (1 << (RETURN_ADDR_REGNUM - GP_REG_FIRST));
 }
