@@ -70,6 +70,9 @@ Enum(Pulp_Chip_Type) String(gap8) Value(PULP_CHIP_GAP8)
 EnumValue
 Enum(Pulp_Chip_Type) String(gap9) Value(PULP_CHIP_GAP9)
 
+EnumValue
+Enum(Pulp_Chip_Type) String(gap10) Value(PULP_CHIP_GAP10)
+
 mchip=
 Target RejectNegative Joined Var(Pulp_Chip) Enum(Pulp_Chip_Type) Init(PULP_CHIP_NONE)
 -mchip=CHIP     Compile code for pulp chip CHIP
@@ -101,6 +104,9 @@ Enum(Pulp_Processor_Type) String(pulpslim) Value(PULP_SLIM)
 
 EnumValue
 Enum(Pulp_Processor_Type) String(gap9) Value(PULP_GAP9)
+
+EnumValue
+Enum(Pulp_Processor_Type) String(gap10) Value(PULP_GAP10)
 
 mcpu=
 Target RejectNegative Joined Var(Pulp_Cpu) Enum(Pulp_Processor_Type) Init(PULP_NONE)

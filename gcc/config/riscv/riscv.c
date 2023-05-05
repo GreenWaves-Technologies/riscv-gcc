@@ -336,6 +336,42 @@ static const struct riscv_tune_info rocket_tune_info = {
   true,						/* slow_unaligned_access */
 };
 
+static const struct riscv_tune_info gap8_tune_info = {
+  {COSTS_N_INSNS (4), COSTS_N_INSNS (5)},	/* fp_add */
+  {COSTS_N_INSNS (4), COSTS_N_INSNS (5)},	/* fp_mul */
+  {COSTS_N_INSNS (20), COSTS_N_INSNS (20)},	/* fp_div */
+  {COSTS_N_INSNS (1), COSTS_N_INSNS (1)},	/* int_mul */
+  {COSTS_N_INSNS (6), COSTS_N_INSNS (6)},	/* int_div */
+  1,						/* issue_rate */
+  3,						/* branch_cost */
+  5,						/* memory_cost */
+  false,					/* slow_unaligned_access */
+};
+
+static const struct riscv_tune_info gap9_tune_info = {
+  {COSTS_N_INSNS (1), COSTS_N_INSNS (1)},	/* fp_add */
+  {COSTS_N_INSNS (1), COSTS_N_INSNS (1)},	/* fp_mul */
+  {COSTS_N_INSNS (7), COSTS_N_INSNS (7)},	/* fp_div */
+  {COSTS_N_INSNS (1), COSTS_N_INSNS (1)},	/* int_mul */
+  {COSTS_N_INSNS (4), COSTS_N_INSNS (4)},	/* int_div */
+  1,						/* issue_rate */
+  3,						/* branch_cost */
+  5,						/* memory_cost */
+  false,					/* slow_unaligned_access */
+};
+
+static const struct riscv_tune_info gap10_tune_info = {
+  {COSTS_N_INSNS (1), COSTS_N_INSNS (1)},	/* fp_add */
+  {COSTS_N_INSNS (1), COSTS_N_INSNS (1)},	/* fp_mul */
+  {COSTS_N_INSNS (7), COSTS_N_INSNS (7)},	/* fp_div */
+  {COSTS_N_INSNS (1), COSTS_N_INSNS (1)},	/* int_mul */
+  {COSTS_N_INSNS (3), COSTS_N_INSNS (3)},	/* int_div */
+  1,						/* issue_rate */
+  3,						/* branch_cost */
+  5,						/* memory_cost */
+  false,					/* slow_unaligned_access */
+};
+
 /* Costs to use when optimizing for size.  */
 static const struct riscv_tune_info optimize_size_tune_info = {
   {COSTS_N_INSNS (1), COSTS_N_INSNS (1)},	/* fp_add */
@@ -352,6 +388,9 @@ static const struct riscv_tune_info optimize_size_tune_info = {
 /* A table describing all the processors GCC knows about.  */
 static const struct riscv_cpu_info riscv_cpu_info_table[] = {
   { "rocket", &rocket_tune_info },
+  { "gap8", &gap8_tune_info },
+  { "gap9", &gap9_tune_info },
+  { "gap10", &gap10_tune_info },
   { "size", &optimize_size_tune_info },
 };
 
@@ -5833,6 +5872,23 @@ riscv_init_machine_status (void)
 
 /* Implement TARGET_OPTION_OVERRIDE.  */
 
+static const char *PulpProcessorImage(enum Pulp_Processor_Type Which)
+
+{
+        switch (Which) {
+                case PULP_RISCV: return "riscv";
+                case PULP_V0: return "pulpv0";
+                case PULP_V1: return "pulpv1";
+                case PULP_V2: return "pulpv2";
+                case PULP_V3: return "pulpv3";
+                case PULP_GAP8: return "gap8";
+                case PULP_GAP9: return "gap9";
+                case PULP_GAP10: return "gap10";
+                case PULP_SLIM: return "pulpslim";
+                default: return 0;
+        }
+}
+
 static void
 riscv_option_override (void)
 {
@@ -5860,7 +5916,7 @@ riscv_option_override (void)
 
   /* Handle -mtune.  */
   cpu = riscv_parse_cpu (riscv_tune_string ? riscv_tune_string :
-			 RISCV_TUNE_STRING_DEFAULT);
+		   (PulpProcessorImage(Pulp_Cpu)?PulpProcessorImage(Pulp_Cpu): RISCV_TUNE_STRING_DEFAULT));
   tune_info = optimize_size ? &optimize_size_tune_info : cpu->tune_info;
 
   /* Use -mtune's setting for slow_unaligned_access, even when optimizing

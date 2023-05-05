@@ -827,7 +827,7 @@
 		   (match_operand:SI 2 "register_operand" " r"))))]
   "(TARGET_MUL||(Pulp_Cpu>=PULP_V2)||(Pulp_Cpu==PULP_SLIM)) && !TARGET_64BIT"
 {
-  if (Pulp_Cpu==PULP_GAP9 && Has_64Int) {
+  if (Pulp_Cpu>=PULP_GAP9 && Has_64Int) {
 	emit_insn (gen_mulsi3_<u>64extended(operands[0], operands[1], operands[2]));
   } else {
   	rtx temp = gen_reg_rtx (SImode);
@@ -897,7 +897,7 @@
 		 (sign_extend:DI (match_operand:SI 2 "register_operand" " r")))
    )
   ]
-  "(Pulp_Cpu==PULP_GAP9) && Has_64Int"
+  "(Pulp_Cpu>=PULP_GAP9) && Has_64Int"
   "p.muls.d\t%0,%1,%2"
   [(set_attr "type" "imul")
    (set_attr "mode" "DI")])
@@ -908,7 +908,7 @@
 		 (zero_extend:DI (match_operand:SI 2 "register_operand" " r")))
    )
   ]
-  "(Pulp_Cpu==PULP_GAP9) && Has_64Int"
+  "(Pulp_Cpu>=PULP_GAP9) && Has_64Int"
   "p.mulu.d\t%0,%1,%2"
   [(set_attr "type" "imul")
    (set_attr "mode" "DI")])
@@ -1193,7 +1193,7 @@
 (define_insn "absdi2"
   [(set (match_operand:DI 0 "register_operand" "=r")
         (abs:DI (match_operand:DI 1 "register_operand" "r")))]
-  "((Pulp_Cpu==PULP_GAP9) && Has_64Int)"
+  "((Pulp_Cpu>=PULP_GAP9) && Has_64Int)"
   "p.abs.d\t%0,%1"
   [(set_attr "type" "arith")
    (set_attr "mode" "DI")])
@@ -1277,7 +1277,7 @@
         )
    )
   ]
-"((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOMINMAX && Has_64Int)"
+"((Pulp_Cpu>=PULP_GAP9) && !TARGET_MASK_NOMINMAX && Has_64Int)"
 "@
  p.min.d \t%0,%1,%2\t# signed min
  p.min.d \t%0,%1,x0\t# signed min 0"
@@ -1308,7 +1308,7 @@
         )
    )
   ]
-"((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOMINMAX && Has_64Int)"
+"((Pulp_Cpu>=PULP_GAP9) && !TARGET_MASK_NOMINMAX && Has_64Int)"
 "@
  p.max.d \t%0,%1,%2\t# signed max
  p.max.d \t%0,%1,x0\t# signed max 0"
@@ -1336,7 +1336,7 @@
         )
    )
   ]
-"((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOMINMAX && Has_64Int)"
+"((Pulp_Cpu>=PULP_GAP9) && !TARGET_MASK_NOMINMAX && Has_64Int)"
 "p.minu.d \t%0,%1,%2\t# unsigned min"
 [(set_attr "type" "arith")
  (set_attr "mode" "DI")]
@@ -1362,7 +1362,7 @@
         )
    )
   ]
-"((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOMINMAX && Has_64Int)"
+"((Pulp_Cpu>=PULP_GAP9) && !TARGET_MASK_NOMINMAX && Has_64Int)"
 "p.maxu.d \t%0,%1,%2\t# signed max"
 [(set_attr "type" "arith")
  (set_attr "mode" "DI")]
@@ -1430,7 +1430,7 @@
         )
    )
   ]
-"((Pulp_Cpu==PULP_GAP9) && Has_64Int && !TARGET_MASK_NOBITOP)"
+"((Pulp_Cpu>=PULP_GAP9) && Has_64Int && !TARGET_MASK_NOBITOP)"
 "p.cnt.d \t%0,%1\t# count bit set to 1"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -2291,7 +2291,7 @@
         )
    )
   ]
-"((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOMAC && Has_64Int)"
+"((Pulp_Cpu>=PULP_GAP9) && !TARGET_MASK_NOMAC && Has_64Int)"
 "p.mac.d \t%0,%1,%2\t# mac 32x32 in 64 instruction"
 [(set_attr "type" "imul")
  (set_attr "mode" "DI")]
@@ -2305,7 +2305,7 @@
 	)
    )
   ]
-"((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOMAC && Has_64Int)"
+"((Pulp_Cpu>=PULP_GAP9) && !TARGET_MASK_NOMAC && Has_64Int)"
 "p.msu.d \t%0,%1,%2\t# mac 32x32 in 64 instruction"
 [(set_attr "type" "imul")
  (set_attr "mode" "DI")]
@@ -2318,7 +2318,7 @@
                  (match_operand:DI 3 "register_operand" "0"))
    )
   ]
-"((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOMAC && Has_64Int)"
+"((Pulp_Cpu>=PULP_GAP9) && !TARGET_MASK_NOMAC && Has_64Int)"
 "p.macu.d \t%0,%1,%2\t# mac 32x32 in 64 instruction"
 [(set_attr "type" "imul")
  (set_attr "mode" "DI")]
@@ -2332,7 +2332,7 @@
 	)
    )
   ]
-"((Pulp_Cpu==PULP_GAP9) && !TARGET_MASK_NOMAC && Has_64Int)"
+"((Pulp_Cpu>=PULP_GAP9) && !TARGET_MASK_NOMAC && Has_64Int)"
 "p.msuu.d \t%0,%1,%2\t# mac 32x32 in 64 instruction"
 [(set_attr "type" "imul")
  (set_attr "mode" "DI")]
@@ -3773,7 +3773,7 @@
 
 (define_insn "read_then_write_spr"
   [(set (match_operand:SI 0 "register_operand" "=r,r")
-	(unspec_volatile [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_WRITE)
+	(unspec_volatile:SI [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_WRITE)
    )
   ]
  "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
@@ -3793,7 +3793,7 @@
  
 (define_insn "read_then_spr_bit_set"
   [(set (match_operand:SI 0 "register_operand" "=r,r")
-	(unspec_volatile [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_SET)
+	(unspec_volatile:SI [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_SET)
    )
   ]
  "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
@@ -3813,7 +3813,7 @@
 
 (define_insn "read_then_spr_bit_clr"
   [(set (match_operand:SI 0 "register_operand" "=r,r")
-	(unspec_volatile [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_CLR)
+	(unspec_volatile:SI [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_CLR)
    )
   ]
  "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"

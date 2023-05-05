@@ -1,8 +1,10 @@
-MULTILIB_OPTIONS = march=rv32imcxgap8/march=rv32imcxgap9 mabi=ilp32
+MULTILIB_OPTIONS = march=rv32imcxgap8/march=rv32imcxgap9/march=rv32imcxgap10 mabi=ilp32
 MULTILIB_DIRNAMES = rv32imcxgap8 \
 rv32imcxgap9 \
+rv32imcxgap10 \
 ilp32
 MULTILIB_REQUIRED = \
 march=rv32imcxgap8/mabi=ilp32 \
 march=rv32imcxgap9/mabi=ilp32 \
+march=rv32imcxgap10/mabi=ilp32 \
 MULTILIB_REUSE = 
