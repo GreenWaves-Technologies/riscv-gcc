@@ -2652,11 +2652,13 @@ riscv_emit_int_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 				*code = NE;
 			}
 		} else {
+			*op1 = force_reg (DImode, *op1);
      			*op0 = riscv_force_binary (word_mode, *code, *op0, *op1);
       			*op1 = const0_rtx;
 			*code = NE;
 		}
 	} else {
+		if (RightImm) *op1 = force_reg (DImode, *op1);
      		*op0 = riscv_force_binary (word_mode, *code, *op0, *op1);
       		*op1 = const0_rtx;
 		*code = NE;
