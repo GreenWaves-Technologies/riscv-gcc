@@ -398,7 +398,7 @@ static unsigned int MaxArgInReg = MAX_ARGS_IN_REGISTERS;
 
 
 /* Order for the CLOBBERs/USEs of push/pop.  */
-static const unsigned push_save_reg_order[] = {
+static const unsigned int push_save_reg_order[] = {
   INVALID_REGNUM, RETURN_ADDR_REGNUM, S0_REGNUM,
   S1_REGNUM, S2_REGNUM, S3_REGNUM, S4_REGNUM,
   S5_REGNUM, S6_REGNUM, S7_REGNUM, S8_REGNUM,
@@ -4477,6 +4477,8 @@ riscv_push_pop_base_sp_adjust (unsigned mask)
 static bool
 riscv_use_push_pop (const struct riscv_frame_info *frame, const HOST_WIDE_INT frame_size)
 {
+  static bool Trace=false;
+
   if (!Has_PushPop)
     return false;
 
@@ -4497,7 +4499,29 @@ riscv_use_push_pop (const struct riscv_frame_info *frame, const HOST_WIDE_INT fr
      which breaks the old push implementation, and we just reject this case
      like save-restore does now.
   */
-  if (base_size > frame_size)
+
+  int N = (int) (sizeof(push_save_reg_order)/sizeof(unsigned int));
+  unsigned int mask = frame->mask;
+  int Hole = 0;
+  for (int i = N-1; i>=1; i--) {
+    unsigned int Reg = push_save_reg_order[i];
+    if (BITSET_P (mask, Reg)) {
+	for (int j=i-1; j>=1; j--) {
+    		unsigned int Reg1 = push_save_reg_order[j];
+    		if (Reg1 != RETURN_ADDR_REGNUM && BITSET_P (mask, Reg1) == 0) {
+			Hole = 1;
+			if (Trace) fprintf(stderr, "Found a hole on %s for a sequence starting at %s\n", reg_names[Reg1], reg_names[Reg]);
+			break;
+		}
+	}
+	if (Hole) break;
+    }
+  }
+  if (Trace) {
+  	unsigned n_regs = riscv_save_push_pop_count (frame->mask) - 1;
+	fprintf(stderr, "n_regs: %d, base_size: %d, frame_size: %d, %s\n", n_regs, (int) base_size, (int) frame_size, Hole?"ILLEGAL":"OK");
+  }
+  if (Hole || (base_size > frame_size))
     return false;
 
   /* {ra,s0-s10} is invalid. */
