@@ -314,6 +314,10 @@ mDIE=
 Target RejectNegative Joined UInteger Var(LINK_DUMP_IE_SECT) Init(0)
 Dump content of import and export sections, 0: no dump, 1 dump only, 2 C equiv, 3 dump and C equiv
 
+mencrypt-info=
+Target RejectNegative Joined Var(ENCRYPT_INFO) Init(0)
+Provide module encryption info through given file
+
 mfpint
 Target Report RejectNegative Mask(FPREGS_ON_GRREGS)
 When hw floating point is enabled maps floats to integer register file

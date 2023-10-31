@@ -2367,7 +2367,6 @@ void
 record_temp_file (const char *filename, int always_delete, int fail_delete)
 {
   char *const name = xstrdup (filename);
-
   if (always_delete)
     {
       struct temp_file *temp;

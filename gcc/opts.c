@@ -1679,7 +1679,7 @@ common_handle_option (struct gcc_options *opts,
   enum opt_code code = (enum opt_code) scode;
 
   gcc_assert (decoded->canonical_option_num_elements <= 2);
-
+  // printf("common_handle_option, code = %d\n", code);
   switch (code)
     {
     case OPT__param:
